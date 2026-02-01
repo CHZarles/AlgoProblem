@@ -9,6 +9,21 @@ function normalizeSourceUrl(rawUrl: string) {
   return u.toString();
 }
 
+function platformFromUrl(rawUrl: string) {
+  try {
+    const host = new URL(rawUrl).hostname.toLowerCase().replace(/^www\./, "");
+    const parts = host.split(".").filter(Boolean);
+    const last2 = parts.slice(-2).join(".");
+    if (last2 === "leetcode.cn" || last2 === "leetcode.com") return "leetcode";
+    if (last2 === "acwing.com") return "acwing";
+    if (parts.length === 2) return parts[0];
+    if (parts.length >= 3) return parts[parts.length - 2];
+    return host || "generic";
+  } catch {
+    return "generic";
+  }
+}
+
 function safeJsonFromText(text: string) {
   try {
     return JSON.parse(text) as unknown;
@@ -223,7 +238,7 @@ ${extracted.markdown}
 `;
 
   return {
-    platform: "generic",
+    platform: platformFromUrl(sourceUrl),
     canonicalUrl: `url:${sourceUrl}`,
     sourceUrl,
     title,

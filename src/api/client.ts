@@ -46,6 +46,14 @@ export async function listProblemTags(limit?: number): Promise<{ tags: Array<{ t
   return apiFetch(`/problems/tags?${sp.toString()}`);
 }
 
+export async function listProblemPlatforms(
+  limit?: number,
+): Promise<{ platforms: Array<{ platform: string; count: number }> }> {
+  const sp = new URLSearchParams();
+  if (limit) sp.set("limit", String(limit));
+  return apiFetch(`/problems/platforms?${sp.toString()}`);
+}
+
 export async function ingestProblems(urls: string[]) {
   return apiFetch<{ results: Array<{ url: string; ok: boolean; problem?: Problem; warnings?: string[]; error?: string }> }>(
     "/problems/ingest",

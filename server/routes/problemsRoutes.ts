@@ -41,6 +41,21 @@ function normalizeSourceUrl(rawUrl: string) {
   return u.toString();
 }
 
+function platformFromUrl(rawUrl: string) {
+  try {
+    const host = new URL(rawUrl).hostname.toLowerCase().replace(/^www\./, "");
+    const parts = host.split(".").filter(Boolean);
+    const last2 = parts.slice(-2).join(".");
+    if (last2 === "leetcode.cn" || last2 === "leetcode.com") return "leetcode";
+    if (last2 === "acwing.com") return "acwing";
+    if (parts.length === 2) return parts[0];
+    if (parts.length >= 3) return parts[parts.length - 2];
+    return host || "generic";
+  } catch {
+    return "generic";
+  }
+}
+
 function hasFrontmatter(markdown: string) {
   const md = markdown.replace(/\r\n/g, "\n");
   if (!md.startsWith("---\n")) return false;
@@ -94,6 +109,23 @@ export function problemsRoutes() {
       .map(([tag, count]) => ({ tag, count }));
 
     return res.json({ tags });
+  });
+
+  r.get("/platforms", (req, res) => {
+    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const limit = Math.max(1, Math.min(200, Number(req.query.limit ?? 80)));
+    const d = db();
+
+    const rows = d
+      .prepare("SELECT platform, COUNT(1) as c FROM problems WHERE workspace_id = ? GROUP BY platform")
+      .all(workspaceId) as Array<{ platform: string; c: number }>;
+
+    const platforms = rows
+      .map((r0) => ({ platform: String(r0.platform || "").trim() || "unknown", count: Number(r0.c ?? 0) }))
+      .sort((a, b) => b.count - a.count || a.platform.localeCompare(b.platform))
+      .slice(0, limit);
+
+    return res.json({ platforms });
   });
 
   r.get("/", (req, res) => {
@@ -403,6 +435,7 @@ export function problemsRoutes() {
           sourceUrls = [sourceUrl];
         } else {
           sourceUrl = normalized;
+          platform = platformFromUrl(sourceUrl);
           canonicalUrl = `url:${sourceUrl}`;
           warnings.push("未识别平台，已作为通用链接题目录入");
           sourceUrls = [sourceUrl];

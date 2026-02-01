@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import type { Collection, Difficulty, OJPlatform, ProblemStatus } from "../../types/model";
+import type { Collection, Difficulty, ProblemStatus } from "../../types/model";
 import { Button } from "../components/Button";
 import { Chip } from "../components/Chip";
 import { Input } from "../components/Input";
 import { cn } from "../../lib/cn";
 
 export type ProblemsAdvancedFiltersValue = {
-  platform: "all" | OJPlatform;
+  platform: "all" | string;
   difficulty: "all" | Difficulty;
   status: "all" | ProblemStatus;
   hasSolution: "all" | boolean;
@@ -44,6 +44,7 @@ export function ProblemsAdvancedFiltersDialog({
   value,
   collections,
   availableTags,
+  availablePlatforms,
   onApply,
 }: {
   open: boolean;
@@ -51,10 +52,12 @@ export function ProblemsAdvancedFiltersDialog({
   value: ProblemsAdvancedFiltersValue;
   collections: Collection[];
   availableTags: Array<{ tag: string; count: number }>;
+  availablePlatforms: Array<{ platform: string; count: number }>;
   onApply: (next: ProblemsAdvancedFiltersValue) => void;
 }) {
   const [draft, setDraft] = useState<ProblemsAdvancedFiltersValue>(value);
   const [tagText, setTagText] = useState("");
+  const [platformText, setPlatformText] = useState("");
 
   const valueKey = useMemo(() => keyOf(value), [value]);
   const draftKey = useMemo(() => keyOf(draft), [draft]);
@@ -71,6 +74,7 @@ export function ProblemsAdvancedFiltersDialog({
       tags: [],
     });
     setTagText("");
+    setPlatformText("");
   };
 
   const apply = () => {
@@ -95,6 +99,7 @@ export function ProblemsAdvancedFiltersDialog({
         if (nextOpen) {
           setDraft(value);
           setTagText("");
+          setPlatformText("");
         }
         onOpenChange(nextOpen);
       }}
@@ -124,24 +129,33 @@ export function ProblemsAdvancedFiltersDialog({
                 <Chip active={draft.platform === "all"} onClick={() => setDraft((d) => ({ ...d, platform: "all" }))}>
                   全部
                 </Chip>
-                <Chip
-                  active={draft.platform === "leetcode"}
-                  onClick={() => setDraft((d) => ({ ...d, platform: "leetcode" }))}
-                >
-                  LeetCode
-                </Chip>
-                <Chip
-                  active={draft.platform === "acwing"}
-                  onClick={() => setDraft((d) => ({ ...d, platform: "acwing" }))}
-                >
-                  AcWing
-                </Chip>
-                <Chip
-                  active={draft.platform === "generic"}
-                  onClick={() => setDraft((d) => ({ ...d, platform: "generic" }))}
-                >
-                  手动
-                </Chip>
+                {availablePlatforms.length
+                  ? availablePlatforms.slice(0, 10).map((p) => {
+                      const active = draft.platform === p.platform;
+                      return (
+                        <Chip key={p.platform} active={active} onClick={() => setDraft((d) => ({ ...d, platform: p.platform }))}>
+                          {p.platform}
+                          <span className="ml-1 text-[10px] text-slate-500">{p.count}</span>
+                        </Chip>
+                      );
+                    })
+                  : null}
+                <div className="w-[240px] max-w-full">
+                  <Input
+                    value={platformText}
+                    onChange={(e) => setPlatformText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const v = platformText.trim();
+                        if (!v) return;
+                        setDraft((d) => ({ ...d, platform: v }));
+                        setPlatformText("");
+                      }
+                    }}
+                    placeholder="自定义平台（回车）"
+                  />
+                </div>
               </div>
             </div>
 

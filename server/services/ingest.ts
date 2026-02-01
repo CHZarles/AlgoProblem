@@ -2,7 +2,7 @@ import { z } from "zod";
 import { load } from "cheerio";
 import { htmlToMarkdown } from "./markdown";
 
-export type IngestPlatform = "leetcode" | "acwing" | "generic";
+export type IngestPlatform = string;
 
 export type IngestedProblem = {
   platform: IngestPlatform;
@@ -28,7 +28,7 @@ function toDifficulty(raw: string | null | undefined): IngestedProblem["difficul
 }
 
 export function parseProblemUrl(rawUrl: string): {
-  platform: Exclude<IngestPlatform, "generic">;
+  platform: "leetcode" | "acwing";
   canonicalUrl: string;
   externalId?: string;
   sourceUrl: string;

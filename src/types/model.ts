@@ -1,4 +1,4 @@
-export type OJPlatform = "leetcode" | "acwing" | "generic";
+export type OJPlatform = string;
 export type Difficulty = "easy" | "medium" | "hard" | "unknown";
 export type ProblemStatus =
   | "todo"

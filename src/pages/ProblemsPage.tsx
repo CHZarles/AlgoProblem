@@ -4,7 +4,14 @@ import { CheckCircle2, Circle, Filter, FolderPlus, MoreHorizontal, Save, Sparkle
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { toast } from "sonner";
 import type { Difficulty, OJPlatform, Problem, ProblemStatus } from "../types/model";
-import { deleteProblem, listCollections, listProblems, listProblemTags, setProblemStatus } from "../api/client";
+import {
+  deleteProblem,
+  listCollections,
+  listProblems,
+  listProblemPlatforms,
+  listProblemTags,
+  setProblemStatus,
+} from "../api/client";
 import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
 import { Chip } from "../app/components/Chip";
@@ -99,10 +106,12 @@ export default function ProblemsPage() {
   );
   const qCollections = useApiQuery(() => listCollections(), []);
   const qAllTags = useApiQuery(() => listProblemTags(200), []);
+  const qAllPlatforms = useApiQuery(() => listProblemPlatforms(80), []);
   type ProblemRow = Problem & { hasSolution?: boolean };
   const problems = (qProblems.data ?? []) as ProblemRow[];
   const collections = qCollections.data ?? [];
   const availableTags = qAllTags.data?.tags ?? [];
+  const availablePlatforms = qAllPlatforms.data?.platforms ?? [];
 
   const cellPy = density.density === "compact" ? "py-2" : density.density === "comfortable" ? "py-4" : "py-3";
   const headerPy = density.density === "compact" ? "py-1.5" : density.density === "comfortable" ? "py-2.5" : "py-2";
@@ -162,7 +171,7 @@ export default function ProblemsPage() {
   };
 
   const advancedActive =
-    platform === "generic" ||
+    platform !== "all" ||
     difficulty === "unknown" ||
     (status !== "all" && status !== "todo" && status !== "done") ||
     hasSolution === false ||
@@ -231,6 +240,12 @@ export default function ProblemsPage() {
           <Chip active={difficulty === "hard"} onClick={() => setDifficulty(difficulty === "hard" ? "all" : "hard")}>
             Hard
           </Chip>
+
+          {platform !== "all" ? (
+            <Chip active onClick={() => setPlatform("all")}>
+              平台:{platform} <X className="h-4 w-4" />
+            </Chip>
+          ) : null}
 
           <Chip active={status === "todo"} onClick={() => setStatus(status === "todo" ? "all" : "todo")}>
             未做
@@ -492,6 +507,7 @@ export default function ProblemsPage() {
         onOpenChange={setAdvancedOpen}
         collections={collections}
         availableTags={availableTags}
+        availablePlatforms={availablePlatforms}
         value={{ platform, difficulty, status, hasSolution, hasNotes, collectionId, tags }}
         onApply={(next) => {
           setPlatform(next.platform);
