@@ -27,6 +27,7 @@ export type Problem = {
   title: string;
   externalId?: string; // e.g. leetcode slug / acwing numeric id
   difficulty: Difficulty;
+  difficultyScore?: number;
   status: ProblemStatus;
   completedAt?: string;
   tags: string[];

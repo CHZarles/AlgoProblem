@@ -222,6 +222,7 @@ export function problemsRoutes() {
       externalId: (row.external_id as string | null) ?? undefined,
       title: row.title as string,
       difficulty: row.difficulty as string,
+      difficultyScore: (row.difficulty_score as number | null) ?? undefined,
       status: row.status as string,
       completedAt: (row.completed_at as string | null) ?? undefined,
       tags: parseJsonArray(row.tags_json as string),
@@ -314,8 +315,8 @@ export function problemsRoutes() {
           const sourceUrls = uniq([ingested.sourceUrl, normalizedInputUrl].filter(Boolean));
           d.prepare(
             `INSERT INTO problems
-             (id, workspace_id, platform, canonical_url, source_url, source_urls_json, external_id, title, difficulty, status, markdown, tags_json, created_at, updated_at, last_activity_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, workspace_id, platform, canonical_url, source_url, source_urls_json, external_id, title, difficulty, difficulty_score, status, markdown, tags_json, created_at, updated_at, last_activity_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           ).run(
             problemId,
             workspaceId,
@@ -326,6 +327,7 @@ export function problemsRoutes() {
             ingested.externalId ?? null,
             ingested.title,
             ingested.difficulty,
+            null,
             "todo",
             ingested.markdown,
             JSON.stringify(uniq(ingested.tags)),
@@ -362,6 +364,7 @@ export function problemsRoutes() {
           externalId: (row.external_id as string | null) ?? undefined,
           title: row.title as string,
           difficulty: row.difficulty as string,
+          difficultyScore: (row.difficulty_score as number | null) ?? undefined,
           status: row.status as string,
           tags: parseJsonArray(row.tags_json as string),
           collections: String(row.collection_ids || "")
@@ -480,8 +483,8 @@ ${rawMarkdown}
       problemId = uuid("p");
       d.prepare(
         `INSERT INTO problems
-         (id, workspace_id, platform, canonical_url, source_url, source_urls_json, external_id, title, difficulty, status, markdown, tags_json, created_at, updated_at, last_activity_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, workspace_id, platform, canonical_url, source_url, source_urls_json, external_id, title, difficulty, difficulty_score, status, markdown, tags_json, created_at, updated_at, last_activity_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         problemId,
         workspaceId,
@@ -492,6 +495,7 @@ ${rawMarkdown}
         externalId,
         rawTitle,
         "unknown",
+        null,
         "todo",
         markdown,
         "[]",
@@ -529,6 +533,7 @@ ${rawMarkdown}
       externalId: (row.external_id as string | null) ?? undefined,
       title: row.title as string,
       difficulty: row.difficulty as string,
+      difficultyScore: (row.difficulty_score as number | null) ?? undefined,
       status: row.status as string,
       completedAt: (row.completed_at as string | null) ?? undefined,
       tags: parseJsonArray(row.tags_json as string),
@@ -713,6 +718,7 @@ ${rawMarkdown}
       externalId: (row.external_id as string | null) ?? undefined,
       title: row.title as string,
       difficulty: row.difficulty as string,
+      difficultyScore: (row.difficulty_score as number | null) ?? undefined,
       status: row.status as string,
       completedAt: (row.completed_at as string | null) ?? undefined,
       tags: parseJsonArray(row.tags_json as string),
@@ -779,6 +785,8 @@ ${rawMarkdown}
     const d = db();
     const Body = z.object({
       platform: z.string().min(1).max(64).optional(),
+      difficulty: z.enum(["easy", "medium", "hard", "unknown"]).optional(),
+      difficultyScore: z.coerce.number().int().min(0).max(5000).optional().nullable(),
       title: z.string().min(1).optional(),
       tags: z.array(z.string().min(1)).optional(),
     });
@@ -796,6 +804,14 @@ ${rawMarkdown}
     if (body.data.platform) {
       fields.push("platform = ?");
       params.push(body.data.platform.trim().toLowerCase());
+    }
+    if (body.data.difficulty) {
+      fields.push("difficulty = ?");
+      params.push(body.data.difficulty);
+    }
+    if (body.data.difficultyScore !== undefined) {
+      fields.push("difficulty_score = ?");
+      params.push(body.data.difficultyScore ?? null);
     }
     if (body.data.title) {
       fields.push("title = ?");

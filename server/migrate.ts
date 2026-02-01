@@ -29,6 +29,7 @@ export function migrate() {
       external_id TEXT,
       title TEXT NOT NULL,
       difficulty TEXT NOT NULL,
+      difficulty_score INTEGER,
       status TEXT NOT NULL,
       completed_at TEXT,
       markdown TEXT NOT NULL,
@@ -176,6 +177,7 @@ export function migrate() {
     const tx = d.transaction(() => {
       if (!hasColumn("problems", "source_urls_json")) addColumn("problems", "source_urls_json TEXT NOT NULL DEFAULT '[]'");
       if (!hasColumn("problems", "completed_at")) addColumn("problems", "completed_at TEXT");
+      if (!hasColumn("problems", "difficulty_score")) addColumn("problems", "difficulty_score INTEGER");
       if (!hasColumn("problems", "review_next_at")) addColumn("problems", "review_next_at TEXT");
       if (!hasColumn("problems", "review_interval_days")) addColumn("problems", "review_interval_days INTEGER NOT NULL DEFAULT 0");
       if (!hasColumn("problems", "review_ease")) addColumn("problems", "review_ease REAL NOT NULL DEFAULT 2.5");

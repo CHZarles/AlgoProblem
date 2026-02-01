@@ -3,7 +3,7 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import type { Note, ProblemStatus, Solution } from "../types/model";
+import type { Difficulty, Note, ProblemStatus, Solution } from "../types/model";
 import {
   createNote,
   createSolution,
@@ -94,16 +94,28 @@ function reviewWhenLabel(reviewNextAt?: string) {
 
 function ProblemMetaEditor({
   platform,
+  difficulty,
+  difficultyScore,
   title,
   tags,
   onPatch,
 }: {
   platform: string;
+  difficulty: Difficulty;
+  difficultyScore?: number;
   title: string;
   tags: string[];
-  onPatch: (patch: { platform?: string; title?: string; tags?: string[] }) => void;
+  onPatch: (patch: {
+    platform?: string;
+    difficulty?: Difficulty;
+    difficultyScore?: number | null;
+    title?: string;
+    tags?: string[];
+  }) => void;
 }) {
   const [localPlatform, setLocalPlatform] = useState(platform);
+  const [localDifficulty, setLocalDifficulty] = useState<Difficulty>(difficulty);
+  const [localScore, setLocalScore] = useState(difficultyScore ? String(difficultyScore) : "");
   const [localTitle, setLocalTitle] = useState(title);
   const [tagsText, setTagsText] = useState(tags.join(", "));
   const debounced = useDebouncedCallback(onPatch, 450);
@@ -122,6 +134,42 @@ function ProblemMetaEditor({
           }}
           placeholder="leetcode / acwing / codeforces / atcoder / ..."
         />
+        <div className="text-xs text-slate-500">难度</div>
+        <div className="grid grid-cols-12 gap-2">
+          <div className="col-span-7">
+            <select
+              value={localDifficulty}
+              onChange={(e) => {
+                const v = e.target.value as Difficulty;
+                setLocalDifficulty(v);
+                debounced({ difficulty: v });
+              }}
+              className="h-9 w-full rounded-lg bg-white/4 px-3 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/35"
+            >
+              <option value="unknown">未知</option>
+              <option value="easy">简单</option>
+              <option value="medium">中等</option>
+              <option value="hard">困难</option>
+            </select>
+          </div>
+          <div className="col-span-5">
+            <Input
+              type="number"
+              min={0}
+              max={5000}
+              value={localScore}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setLocalScore(raw);
+                if (!raw.trim()) return debounced({ difficultyScore: null });
+                const n = Number(raw);
+                if (!Number.isFinite(n)) return;
+                debounced({ difficultyScore: Math.max(0, Math.min(5000, Math.round(n))) });
+              }}
+              placeholder="分数（可选）"
+            />
+          </div>
+        </div>
         <div className="text-xs text-slate-500">标题</div>
         <Input
           value={localTitle}
@@ -777,6 +825,8 @@ export default function ProblemDetailPage() {
             <ProblemMetaEditor
               key={problem.id}
               platform={problem.platform}
+              difficulty={problem.difficulty}
+              difficultyScore={problem.difficultyScore}
               title={problem.title}
               tags={problem.tags}
               onPatch={(p) => {
