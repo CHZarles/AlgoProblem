@@ -1,8 +1,9 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Check, Laptop, Moon, Palette, Search, Sparkles, Sun } from "lucide-react";
+import { Check, ChevronsUpDown, Laptop, Moon, Palette, Rows3, Search, Sparkles, Sun } from "lucide-react";
 import { Button } from "../components/Button";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../theme";
+import { useDensity } from "../density";
 
 export function Topbar({
   onOpenCommand,
@@ -12,11 +13,18 @@ export function Topbar({
   onOpenIngest: () => void;
 }) {
   const theme = useTheme();
+  const density = useDensity();
   const meta = (() => {
     if (theme.preference === "system") return { Icon: Laptop, label: "系统", iconClass: "text-slate-400" };
     if (theme.preference === "light") return { Icon: Sun, label: "浅色", iconClass: "text-amber-400" };
     if (theme.preference === "cream") return { Icon: Palette, label: "米白", iconClass: "text-[#B0893B]" };
     return { Icon: Moon, label: "深色", iconClass: "text-indigo-300" };
+  })();
+
+  const densityMeta = (() => {
+    if (density.density === "compact") return { label: "紧凑" };
+    if (density.density === "comfortable") return { label: "舒适" };
+    return { label: "标准" };
   })();
 
   return (
@@ -112,6 +120,42 @@ export function Topbar({
                 </span>
                 {theme.preference === "dark" ? <Check className="h-4 w-4 text-sky-500" /> : null}
               </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <Button variant="ghost" aria-label="界面密度" className="gap-2.5">
+              <Rows3 className="h-4 w-4 text-slate-400" />
+              <span className="hidden sm:inline text-xs font-medium text-slate-200">{densityMeta.label}</span>
+              <ChevronsUpDown className="h-4 w-4 text-slate-500" />
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              sideOffset={8}
+              align="end"
+              className="w-40 rounded-xl bg-[#0F1520] p-1 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel"
+            >
+              {[
+                { v: "compact" as const, label: "紧凑" },
+                { v: "standard" as const, label: "标准" },
+                { v: "comfortable" as const, label: "舒适" },
+              ].map((x) => (
+                <DropdownMenu.Item
+                  key={x.v}
+                  onSelect={() => density.setDensity(x.v)}
+                  className={cn(
+                    "flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm outline-none",
+                    "text-slate-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-slate-50",
+                    density.density === x.v && "bg-white/4",
+                  )}
+                >
+                  <span className="font-medium">{x.label}</span>
+                  {density.density === x.v ? <Check className="h-4 w-4 text-sky-500" /> : null}
+                </DropdownMenu.Item>
+              ))}
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>

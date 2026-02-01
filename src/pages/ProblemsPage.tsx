@@ -14,6 +14,7 @@ import { ProblemsAdvancedFiltersDialog } from "../app/widgets/ProblemsAdvancedFi
 import { cn } from "../lib/cn";
 import { useApiQuery } from "../api/hooks";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
+import { useDensity } from "../app/density";
 
 function difficultyTone(d: Difficulty) {
   if (d === "easy") return "easy";
@@ -59,8 +60,23 @@ function statusTone(s: ProblemStatus) {
   }
 }
 
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function reviewMeta(reviewNextAt?: string) {
+  if (!reviewNextAt) return null;
+  const today = startOfDay(new Date()).getTime();
+  const next = startOfDay(new Date(reviewNextAt)).getTime();
+  const days = Math.round((next - today) / 86400000);
+  const label = days === 0 ? "今天" : days > 0 ? `${days} 天后` : `逾期 ${Math.abs(days)} 天`;
+  const tone = days < 0 ? ("warn" as const) : days === 0 ? ("ok" as const) : ("neutral" as const);
+  return { label, tone, days };
+}
+
 export default function ProblemsPage() {
   const navigate = useNavigate();
+  const density = useDensity();
   const [query, setQuery] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -86,6 +102,9 @@ export default function ProblemsPage() {
   type ProblemRow = Problem & { hasSolution?: boolean };
   const problems = (qProblems.data ?? []) as ProblemRow[];
   const collections = qCollections.data ?? [];
+
+  const cellPy = density.density === "compact" ? "py-2" : density.density === "comfortable" ? "py-4" : "py-3";
+  const headerPy = density.density === "compact" ? "py-1.5" : density.density === "comfortable" ? "py-2.5" : "py-2";
 
   const visibleIds = new Set(problems.map((p) => p.id));
   const selectedIds = Object.entries(selected)
@@ -252,14 +271,14 @@ export default function ProblemsPage() {
       <div className="overflow-hidden rounded-2xl bg-white/3 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
         <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
           <div className="text-sm font-medium text-slate-300">{problems.length} 道题</div>
-          <div className="text-xs text-slate-500">行高：44 / 48（可在设置扩展）</div>
+          <div className="text-xs text-slate-500">密度：{density.density === "compact" ? "紧凑" : density.density === "comfortable" ? "舒适" : "标准"}</div>
         </div>
 
         <div className="overflow-auto">
           <table className="w-full min-w-[980px] table-fixed">
             <thead className="bg-black/10 text-left text-xs text-slate-500">
               <tr>
-                <th className="w-12 px-4 py-2">
+                <th className={cn("w-12 px-4", headerPy)}>
                   <input
                     type="checkbox"
                     checked={selectedIds.length > 0 && selectedIds.length === problems.length}
@@ -267,13 +286,14 @@ export default function ProblemsPage() {
                     className="h-4 w-4 accent-sky-500"
                   />
                 </th>
-                <th className="px-2 py-2">标题</th>
-                <th className="w-24 px-2 py-2">难度</th>
-                <th className="w-24 px-2 py-2">状态</th>
-                <th className="w-64 px-2 py-2">标签</th>
-                <th className="w-40 px-2 py-2">最近活动</th>
-                <th className="w-20 px-2 py-2">题解</th>
-                <th className="w-14 px-2 py-2"></th>
+                <th className={cn("px-2", headerPy)}>标题</th>
+                <th className={cn("w-24 px-2", headerPy)}>难度</th>
+                <th className={cn("w-24 px-2", headerPy)}>状态</th>
+                <th className={cn("w-28 px-2", headerPy)}>下次复习</th>
+                <th className={cn("w-56 px-2", headerPy)}>标签</th>
+                <th className={cn("w-40 px-2", headerPy)}>最近活动</th>
+                <th className={cn("w-20 px-2", headerPy)}>题解</th>
+                <th className={cn("w-14 px-2", headerPy)}></th>
               </tr>
             </thead>
             <tbody>
@@ -281,6 +301,7 @@ export default function ProblemsPage() {
                 const checked = !!selected[p.id];
                 const hasSol = Boolean(p.hasSolution);
                 const canOpenSource = /^https?:\/\//i.test(p.sourceUrl);
+                const r = reviewMeta(p.reviewNextAt);
                 return (
                   <tr
                     key={p.id}
@@ -289,7 +310,7 @@ export default function ProblemsPage() {
                       checked && "bg-sky-500/6",
                     )}
                   >
-                    <td className="px-4 py-3">
+                    <td className={cn("px-4", cellPy)}>
                       <input
                         type="checkbox"
                         checked={checked}
@@ -297,7 +318,7 @@ export default function ProblemsPage() {
                         className="h-4 w-4 accent-sky-500"
                       />
                     </td>
-                    <td className="px-2 py-3">
+                    <td className={cn("px-2", cellPy)}>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <Link to={`/problems/${p.id}`} className="truncate font-medium text-slate-50 hover:underline">
@@ -319,13 +340,23 @@ export default function ProblemsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 py-3">
+                    <td className={cn("px-2", cellPy)}>
                       <Badge tone={difficultyTone(p.difficulty)}>{difficultyLabel(p.difficulty)}</Badge>
                     </td>
-                    <td className="px-2 py-3">
+                    <td className={cn("px-2", cellPy)}>
                       <Badge tone={statusTone(p.status)}>{statusLabel(p.status)}</Badge>
                     </td>
-                    <td className="px-2 py-3">
+                    <td className={cn("px-2", cellPy)}>
+                      {r ? (
+                        <div className="space-y-1">
+                          <Badge tone={r.tone}>{r.label}</Badge>
+                          <div className="text-[11px] text-slate-500">{new Date(p.reviewNextAt!).toLocaleDateString()}</div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500">—</span>
+                      )}
+                    </td>
+                    <td className={cn("px-2", cellPy)}>
                       <div className="flex flex-wrap gap-1.5">
                         {p.tags.length ? (
                           p.tags.slice(0, 4).map((t) => (
@@ -341,13 +372,13 @@ export default function ProblemsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-2 py-3 text-xs text-slate-500">
+                    <td className={cn("px-2 text-xs text-slate-500", cellPy)}>
                       {new Date(p.lastActivityAt).toLocaleString()}
                     </td>
-                    <td className="px-2 py-3">
+                    <td className={cn("px-2", cellPy)}>
                       <div className="text-slate-400">{hasSol ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}</div>
                     </td>
-                    <td className="px-2 py-3">
+                    <td className={cn("px-2", cellPy)}>
                       <div className="flex justify-end opacity-0 transition group-hover:opacity-100">
                         <DropdownMenu.Root>
                           <DropdownMenu.Trigger asChild>

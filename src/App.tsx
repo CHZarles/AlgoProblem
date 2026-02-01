@@ -11,6 +11,7 @@ import StatsPage from "./pages/StatsPage";
 import ReviewPage from "./pages/ReviewPage";
 import SettingsPage from "./pages/SettingsPage";
 import { ThemeProvider, useTheme } from "./app/theme";
+import { DensityProvider } from "./app/density";
 
 function AppShell() {
   const theme = useTheme();
@@ -53,7 +54,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AppShell />
+        <DensityProvider>
+          <AppShell />
+        </DensityProvider>
       </ThemeProvider>
     </BrowserRouter>
   );
