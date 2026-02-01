@@ -82,6 +82,23 @@ function normalizeStatementLayout(markdown: string) {
     .join("\n");
 }
 
+function normalizeLatexInMath(markdown: string) {
+  const normalizeInner = (inner: string) => {
+    let s = inner;
+    // Some platforms emit `\\lt`/`\\le` inside TeX; `\\` is a newline in TeX, leading to literal "lt/le".
+    s = s.replace(/\\\\lt\b/g, "<");
+    s = s.replace(/\\\\gt\b/g, ">");
+    s = s.replace(/\\\\(leqslant|leq|le|geqslant|geq|ge|neq|ne)\b/g, "\\$1");
+    // `\_` renders a literal underscore in TeX; in statements it almost always means subscript.
+    s = s.replace(/\\_(?=[A-Za-z0-9{])/g, "_");
+    return s;
+  };
+
+  const md = markdown.replace(/\r\n/g, "\n");
+  const withBlocks = md.replace(/\$\$([\s\S]*?)\$\$/g, (_m, inner: string) => `$$${normalizeInner(inner)}$$`);
+  return withBlocks.replace(/\$([^\n$]*?)\$/g, (_m, inner: string) => `$${normalizeInner(inner)}$`);
+}
+
 export function Markdown({
   value,
   className,
@@ -92,7 +109,7 @@ export function Markdown({
   mode?: "default" | "statement";
 }) {
   const theme = useTheme();
-  const base = normalizeBoldLabels(stripOuterMarkdownFence(stripFrontmatter(value)));
+  const base = normalizeLatexInMath(normalizeBoldLabels(stripOuterMarkdownFence(stripFrontmatter(value))));
   const normalized = mode === "statement" ? normalizeStatementLayout(base) : base;
   return (
     <div

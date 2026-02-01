@@ -21,6 +21,21 @@ function normalizeStatementLayout(markdown: string) {
   return parts.join("```");
 }
 
+function normalizeLatexInMath(markdown: string) {
+  const normalizeInner = (inner: string) => {
+    let s = inner;
+    s = s.replace(/\\\\lt\b/g, "<");
+    s = s.replace(/\\\\gt\b/g, ">");
+    s = s.replace(/\\\\(leqslant|leq|le|geqslant|geq|ge|neq|ne)\b/g, "\\$1");
+    s = s.replace(/\\_(?=[A-Za-z0-9{])/g, "_");
+    return s;
+  };
+
+  const md = markdown.replace(/\r\n/g, "\n");
+  const withBlocks = md.replace(/\$\$([\s\S]*?)\$\$/g, (_m, inner: string) => `$$${normalizeInner(inner)}$$`);
+  return withBlocks.replace(/\$([^\n$]*?)\$/g, (_m, inner: string) => `$${normalizeInner(inner)}$`);
+}
+
 export function htmlToMarkdown(html: string) {
   const td = new TurndownService({
     headingStyle: "atx",
@@ -55,5 +70,5 @@ export function htmlToMarkdown(html: string) {
   });
 
   const md = td.turndown(html).trim();
-  return normalizeStatementLayout(md).trim();
+  return normalizeLatexInMath(normalizeStatementLayout(md)).trim();
 }
