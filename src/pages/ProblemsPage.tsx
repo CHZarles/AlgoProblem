@@ -221,12 +221,13 @@ export default function ProblemsPage() {
             </Chip>
           ))}
 
-          <Chip active={platform === "leetcode"} onClick={() => setPlatform(platform === "leetcode" ? "all" : "leetcode")}>
-            LeetCode
-          </Chip>
-          <Chip active={platform === "acwing"} onClick={() => setPlatform(platform === "acwing" ? "all" : "acwing")}>
-            AcWing
-          </Chip>
+          {platform === "all"
+            ? availablePlatforms.slice(0, 6).map((p) => (
+                <Chip key={p.platform} active={false} onClick={() => setPlatform(p.platform)}>
+                  {p.platform}
+                </Chip>
+              ))
+            : null}
 
           <Chip active={difficulty === "easy"} onClick={() => setDifficulty(difficulty === "easy" ? "all" : "easy")}>
             Easy
