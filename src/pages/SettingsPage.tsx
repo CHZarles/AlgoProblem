@@ -149,7 +149,9 @@ export default function SettingsPage() {
         )}
       >
         <div className="text-sm font-semibold text-slate-200">LLM</div>
-        <div className="mt-1 text-sm text-slate-500">配置后将优先用 LLM 从链接抽取题面 Markdown（失败再尝试结构化抓取）。</div>
+        <div className="mt-1 text-sm text-slate-500">
+          用于从通用链接抽取题面 Markdown（LeetCode 默认优先结构化抓取以保证数字/公式/样例不被改写）。
+        </div>
 
         <div className="mt-4 grid gap-3">
           <div>
