@@ -91,9 +91,21 @@ export function Sidebar({
     >
       <div className="flex h-14 items-center justify-between px-3">
         <div className={cn("flex items-center gap-2", collapsed ? "justify-center" : "")}>
-          <div className="grid h-8 w-8 place-items-center rounded-xl bg-sky-500/14 text-sky-200 shadow-[0_0_0_1px_rgba(14,165,233,0.25)]">
-            <span className="text-sm font-semibold">A</span>
-          </div>
+          <NavLink
+            to="/problems"
+            aria-label="回到题库"
+            title="AlgoWorkspace"
+            className={cn(
+              "group relative grid h-8 w-8 place-items-center rounded-xl",
+              "bg-gradient-to-br from-sky-500/18 via-sky-500/10 to-indigo-500/16",
+              "shadow-[0_0_0_1px_rgba(14,165,233,0.22)]",
+              "hover:brightness-[1.08] active:brightness-[0.98]",
+            )}
+          >
+            <span className="select-none text-[12px] font-semibold tracking-tight text-slate-50">AW</span>
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#0B0F14] shadow-[0_0_0_1px_rgba(148,163,184,0.22)]" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+          </NavLink>
           {!collapsed ? (
             <div>
               <div className="text-sm font-semibold text-slate-200">AlgoWorkspace</div>
