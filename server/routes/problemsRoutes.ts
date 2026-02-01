@@ -70,6 +70,32 @@ export function problemsRoutes() {
   const r = Router();
   r.use(requireWorkspace);
 
+  r.get("/tags", (req, res) => {
+    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const limit = Math.max(1, Math.min(500, Number(req.query.limit ?? 200)));
+    const d = db();
+
+    const rows = d
+      .prepare("SELECT tags_json FROM problems WHERE workspace_id = ?")
+      .all(workspaceId) as Array<{ tags_json: string }>;
+
+    const counts = new Map<string, number>();
+    for (const r0 of rows) {
+      for (const t of parseJsonArray(r0.tags_json)) {
+        const k = String(t).trim().replace(/^#/, "").toLowerCase();
+        if (!k) continue;
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+      }
+    }
+
+    const tags = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, limit)
+      .map(([tag, count]) => ({ tag, count }));
+
+    return res.json({ tags });
+  });
+
   r.get("/", (req, res) => {
     const q = (req.query.q as string | undefined)?.trim() ?? "";
     const platform = (req.query.platform as string | undefined) ?? "all";

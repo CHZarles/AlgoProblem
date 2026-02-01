@@ -40,6 +40,12 @@ export async function listProblems(params: {
   return apiFetch(`/problems?${sp.toString()}`);
 }
 
+export async function listProblemTags(limit?: number): Promise<{ tags: Array<{ tag: string; count: number }> }> {
+  const sp = new URLSearchParams();
+  if (limit) sp.set("limit", String(limit));
+  return apiFetch(`/problems/tags?${sp.toString()}`);
+}
+
 export async function ingestProblems(urls: string[]) {
   return apiFetch<{ results: Array<{ url: string; ok: boolean; problem?: Problem; warnings?: string[]; error?: string }> }>(
     "/problems/ingest",

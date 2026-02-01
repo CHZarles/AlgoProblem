@@ -4,7 +4,7 @@ import { CheckCircle2, Circle, Filter, FolderPlus, MoreHorizontal, Save, Sparkle
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { toast } from "sonner";
 import type { Difficulty, OJPlatform, Problem, ProblemStatus } from "../types/model";
-import { deleteProblem, listCollections, listProblems, setProblemStatus } from "../api/client";
+import { deleteProblem, listCollections, listProblems, listProblemTags, setProblemStatus } from "../api/client";
 import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
 import { Chip } from "../app/components/Chip";
@@ -98,9 +98,11 @@ export default function ProblemsPage() {
     [q, platform, difficulty, status, hasSolution, hasNotes, collectionId, tagsKey],
   );
   const qCollections = useApiQuery(() => listCollections(), []);
+  const qAllTags = useApiQuery(() => listProblemTags(200), []);
   type ProblemRow = Problem & { hasSolution?: boolean };
   const problems = (qProblems.data ?? []) as ProblemRow[];
   const collections = qCollections.data ?? [];
+  const availableTags = qAllTags.data?.tags ?? [];
 
   const cellPy = density.density === "compact" ? "py-2" : density.density === "comfortable" ? "py-4" : "py-3";
   const headerPy = density.density === "compact" ? "py-1.5" : density.density === "comfortable" ? "py-2.5" : "py-2";
@@ -489,6 +491,7 @@ export default function ProblemsPage() {
         open={advancedOpen}
         onOpenChange={setAdvancedOpen}
         collections={collections}
+        availableTags={availableTags}
         value={{ platform, difficulty, status, hasSolution, hasNotes, collectionId, tags }}
         onApply={(next) => {
           setPlatform(next.platform);

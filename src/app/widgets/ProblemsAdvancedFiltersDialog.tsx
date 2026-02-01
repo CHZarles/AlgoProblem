@@ -43,12 +43,14 @@ export function ProblemsAdvancedFiltersDialog({
   onOpenChange,
   value,
   collections,
+  availableTags,
   onApply,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   value: ProblemsAdvancedFiltersValue;
   collections: Collection[];
+  availableTags: Array<{ tag: string; count: number }>;
   onApply: (next: ProblemsAdvancedFiltersValue) => void;
 }) {
   const [draft, setDraft] = useState<ProblemsAdvancedFiltersValue>(value);
@@ -283,6 +285,30 @@ export function ProblemsAdvancedFiltersDialog({
 
             <div>
               <div className="text-xs font-medium text-slate-300">标签</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {availableTags.length ? (
+                  availableTags.slice(0, 24).map((t) => {
+                    const active = draft.tags.includes(t.tag);
+                    return (
+                      <Chip
+                        key={t.tag}
+                        active={active}
+                        onClick={() =>
+                          setDraft((d) => ({
+                            ...d,
+                            tags: active ? d.tags.filter((x) => x !== t.tag) : uniqTags([...d.tags, t.tag]),
+                          }))
+                        }
+                      >
+                        #{t.tag}
+                        <span className="ml-1 text-[10px] text-slate-500">{t.count}</span>
+                      </Chip>
+                    );
+                  })
+                ) : (
+                  <div className="text-sm text-slate-500">暂无标签（先给题目加点标签）</div>
+                )}
+              </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <div className="w-[280px] max-w-full">
                   <Input
