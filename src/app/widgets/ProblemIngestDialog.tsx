@@ -324,7 +324,7 @@ export function ProblemIngestDialog({
                 )}
               </div>
               <div className="mt-3 rounded-xl bg-white/3 p-3 text-xs text-slate-400 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-                题面规则：入库必须有 Markdown 题面（支持 LaTeX）。LeetCode 优先结构化抓取，尽量不改动数字/公式/样例；其他链接优先 LLM（如已配置，失败回退通用抓取）；也可手动粘贴 Markdown。
+                题面规则：入库必须有 Markdown 题面（支持 LaTeX）。LeetCode / AcWing 优先结构化抓取（更贴近原题排版，避免数字/公式/样例被误改；AcWing 可配置 Cookie 处理需要登录的题）；其他链接优先 LLM（如已配置，失败回退通用抓取）；也可手动粘贴 Markdown。
               </div>
             </div>
           </div>
