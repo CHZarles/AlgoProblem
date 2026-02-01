@@ -10,6 +10,24 @@ export function htmlToMarkdown(html: string) {
   });
   td.use(gfm);
 
+  // Preserve common math-ish formatting
+  td.addRule("sup", {
+    filter: "sup",
+    replacement: (content) => {
+      const v = content.trim();
+      if (!v) return "";
+      return v.length === 1 ? `^${v}` : `^{${v}}`;
+    },
+  });
+  td.addRule("sub", {
+    filter: "sub",
+    replacement: (content) => {
+      const v = content.trim();
+      if (!v) return "";
+      return v.length === 1 ? `_${v}` : `_{${v}}`;
+    },
+  });
+
   // Keep line breaks in <br>
   td.addRule("br", {
     filter: "br",
@@ -18,4 +36,3 @@ export function htmlToMarkdown(html: string) {
 
   return td.turndown(html).trim();
 }
-

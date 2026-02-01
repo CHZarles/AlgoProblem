@@ -272,7 +272,6 @@ export function problemsRoutes() {
         if (llm) {
           try {
             ingested = await ingestWithLlm(url, llm);
-            ingestWarnings.push("已使用 LLM 抽取题面");
           } catch (e) {
             ingestWarnings.push(`LLM 抽取失败，已回退结构化抓取：${e instanceof Error ? e.message : "unknown_error"}`);
             ingested = await ingestOne(url);

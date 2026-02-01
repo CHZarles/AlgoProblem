@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { load } from "cheerio";
 import { fetchStructured, type IngestedProblem } from "./ingest";
+import { htmlToMarkdown } from "./markdown";
 import { llmChatWithMeta, type LlmConfig } from "./llm";
 
 function normalizeSourceUrl(rawUrl: string) {
@@ -114,6 +115,7 @@ async function extractFromHtml(input: {
 
   const system = [
     "你是一个算法题收集助手。你会从给定的 HTML 中抽取「题目描述」，并输出干净的 Markdown。",
+    "严禁改写任何数字、公式、样例、约束条件、复杂度（包括符号/上下标/单位/范围）。必须原样保留。",
     "只输出 JSON，不要输出任何解释文字。",
     "JSON 结构：",
     `{"title"?: string, "markdown": string, "difficulty"?: "easy"|"medium"|"hard"|"unknown", "tags"?: string[] }`,
@@ -168,6 +170,33 @@ export async function ingestWithLlm(url: string, config: LlmConfig): Promise<Ing
   }
 
   if (structured) {
+    // LeetCode: prefer structured conversion to avoid LLM rewriting numbers/formulas.
+    if (structured.platform === "leetcode") {
+      const md = htmlToMarkdown(structured.contentHtml);
+      const markdown = `---
+source: structured
+canonical_url: ${structured.sourceUrl}
+title: ${structured.title}
+difficulty: ${structured.difficulty}
+fetched_at: ${new Date().toISOString()}
+---
+
+${md}
+`;
+
+      return {
+        platform: structured.platform,
+        canonicalUrl: structured.canonicalUrl,
+        sourceUrl: structured.sourceUrl,
+        title: structured.title,
+        externalId: structured.externalId,
+        difficulty: structured.difficulty,
+        tags: structured.tags,
+        markdown,
+        warnings: [...structured.warnings, "LeetCode 已使用结构化抓取（避免数字/公式被改写）"],
+      };
+    }
+
     // LeetCode 优先输出中文题面。
     const outputLanguage = structured.platform === "leetcode" ? ("zh" as const) : "auto";
     const extracted = await extractFromHtml({
