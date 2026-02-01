@@ -97,14 +97,12 @@ export function Sidebar({
             title="AlgoWorkspace"
             className={cn(
               "group relative grid h-8 w-8 place-items-center rounded-xl",
-              "bg-gradient-to-br from-sky-500/18 via-sky-500/10 to-indigo-500/16",
-              "shadow-[0_0_0_1px_rgba(14,165,233,0.22)]",
+              "bg-black/20",
+              "shadow-[0_0_0_1px_rgba(148,163,184,0.18)]",
               "hover:brightness-[1.08] active:brightness-[0.98]",
             )}
           >
-            <span className="select-none text-[12px] font-semibold tracking-tight text-slate-50">AW</span>
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#0B0F14] shadow-[0_0_0_1px_rgba(148,163,184,0.22)]" />
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+            <span className="select-none font-mono text-[12px] font-semibold tracking-tight text-emerald-200">{`</>`}</span>
           </NavLink>
           {!collapsed ? (
             <div>
