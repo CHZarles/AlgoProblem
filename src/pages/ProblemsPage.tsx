@@ -192,80 +192,82 @@ export default function ProblemsPage() {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="w-[420px] max-w-full">
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索题名 / 标签 / 题面 / 笔记…" />
-        </div>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索题名 / 标签 / 题面 / 笔记…" />
+          </div>
 
-        <div className="w-[260px] max-w-full">
-          <Input
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addTags(tagInput);
-              }
-            }}
-            placeholder="标签过滤（回车添加，逗号分隔）"
-            className="h-8 rounded-full text-xs"
-          />
-        </div>
-        {tags.map((t) => (
-          <Chip
-            key={t}
-            active
-            onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen(true)}
+            className={cn(
+              "shrink-0 inline-flex h-9 items-center gap-2 rounded-xl px-3 text-sm shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+              advancedActive
+                ? "bg-sky-500/18 text-sky-200 shadow-[0_0_0_1px_rgba(14,165,233,0.30)]"
+                : "bg-white/4 text-slate-200 hover:bg-white/7",
+            )}
           >
-            #{t} <X className="h-4 w-4" />
+            <Filter className="h-4 w-4" />
+            更多
+            {advancedActive ? <span className="ml-1 h-1.5 w-1.5 rounded-full bg-sky-400" /> : null}
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-[260px] max-w-full">
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTags(tagInput);
+                }
+              }}
+              placeholder="标签过滤（回车添加，逗号分隔）"
+              className="h-8 rounded-full text-xs"
+            />
+          </div>
+          {tags.map((t) => (
+            <Chip key={t} active onClick={() => setTags((prev) => prev.filter((x) => x !== t))}>
+              #{t} <X className="h-4 w-4" />
+            </Chip>
+          ))}
+
+          <Chip active={platform === "leetcode"} onClick={() => setPlatform(platform === "leetcode" ? "all" : "leetcode")}>
+            LeetCode
           </Chip>
-        ))}
+          <Chip active={platform === "acwing"} onClick={() => setPlatform(platform === "acwing" ? "all" : "acwing")}>
+            AcWing
+          </Chip>
 
-        <Chip active={platform === "leetcode"} onClick={() => setPlatform(platform === "leetcode" ? "all" : "leetcode")}>
-          LeetCode
-        </Chip>
-        <Chip active={platform === "acwing"} onClick={() => setPlatform(platform === "acwing" ? "all" : "acwing")}>
-          AcWing
-        </Chip>
+          <Chip active={difficulty === "easy"} onClick={() => setDifficulty(difficulty === "easy" ? "all" : "easy")}>
+            Easy
+          </Chip>
+          <Chip
+            active={difficulty === "medium"}
+            onClick={() => setDifficulty(difficulty === "medium" ? "all" : "medium")}
+          >
+            Medium
+          </Chip>
+          <Chip active={difficulty === "hard"} onClick={() => setDifficulty(difficulty === "hard" ? "all" : "hard")}>
+            Hard
+          </Chip>
 
-        <Chip active={difficulty === "easy"} onClick={() => setDifficulty(difficulty === "easy" ? "all" : "easy")}>
-          Easy
-        </Chip>
-        <Chip
-          active={difficulty === "medium"}
-          onClick={() => setDifficulty(difficulty === "medium" ? "all" : "medium")}
-        >
-          Medium
-        </Chip>
-        <Chip active={difficulty === "hard"} onClick={() => setDifficulty(difficulty === "hard" ? "all" : "hard")}>
-          Hard
-        </Chip>
-
-        <Chip active={status === "todo"} onClick={() => setStatus(status === "todo" ? "all" : "todo")}>
-          未做
-        </Chip>
-        <Chip active={status === "done"} onClick={() => setStatus(status === "done" ? "all" : "done")}>
-          已做
-        </Chip>
-        <Chip
-          active={hasSolution === true}
-          onClick={() => setHasSolution(hasSolution === true ? "all" : true)}
-        >
-          已发布题解
-        </Chip>
-
-        <button
-          type="button"
-          onClick={() => setAdvancedOpen(true)}
-          className={cn(
-            "ml-auto inline-flex h-8 items-center gap-2 rounded-full px-3 text-xs shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
-            advancedActive ? "bg-sky-500/18 text-sky-200 shadow-[0_0_0_1px_rgba(14,165,233,0.30)]" : "bg-white/4 text-slate-300 hover:bg-white/7",
-          )}
-        >
-          <Filter className="h-4 w-4" />
-          更多
-          {advancedActive ? <span className="h-1.5 w-1.5 rounded-full bg-sky-400" /> : null}
-        </button>
+          <Chip active={status === "todo"} onClick={() => setStatus(status === "todo" ? "all" : "todo")}>
+            未做
+          </Chip>
+          <Chip active={status === "done"} onClick={() => setStatus(status === "done" ? "all" : "done")}>
+            已做
+          </Chip>
+          <Chip
+            active={hasSolution === true}
+            onClick={() => setHasSolution(hasSolution === true ? "all" : true)}
+          >
+            已发布题解
+          </Chip>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl bg-white/3 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
