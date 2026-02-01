@@ -57,7 +57,6 @@ export function ProblemsAdvancedFiltersDialog({
 }) {
   const [draft, setDraft] = useState<ProblemsAdvancedFiltersValue>(value);
   const [tagText, setTagText] = useState("");
-  const [platformText, setPlatformText] = useState("");
 
   const valueKey = useMemo(() => keyOf(value), [value]);
   const draftKey = useMemo(() => keyOf(draft), [draft]);
@@ -74,7 +73,6 @@ export function ProblemsAdvancedFiltersDialog({
       tags: [],
     });
     setTagText("");
-    setPlatformText("");
   };
 
   const apply = () => {
@@ -99,7 +97,6 @@ export function ProblemsAdvancedFiltersDialog({
         if (nextOpen) {
           setDraft(value);
           setTagText("");
-          setPlatformText("");
         }
         onOpenChange(nextOpen);
       }}
@@ -140,22 +137,6 @@ export function ProblemsAdvancedFiltersDialog({
                       );
                     })
                   : null}
-                <div className="w-[240px] max-w-full">
-                  <Input
-                    value={platformText}
-                    onChange={(e) => setPlatformText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const v = platformText.trim();
-                        if (!v) return;
-                        setDraft((d) => ({ ...d, platform: v }));
-                        setPlatformText("");
-                      }
-                    }}
-                    placeholder="自定义平台（回车）"
-                  />
-                </div>
               </div>
             </div>
 
