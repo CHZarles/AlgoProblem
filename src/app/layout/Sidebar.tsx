@@ -57,7 +57,6 @@ export function Sidebar({
   onToggle: (v: boolean) => void;
 }) {
   const widthClass = collapsed ? "w-[72px]" : "w-[240px]";
-  const year = useMemo(() => new Date().getFullYear(), []);
 
   const qStats = useApiQuery(() => getStats(), []);
   const meta = useMemo(() => {
@@ -98,10 +97,7 @@ export function Sidebar({
           {!collapsed ? (
             <div>
               <div className="text-sm font-semibold text-slate-200">AlgoWorkspace</div>
-              <div className="mt-0.5 text-[11px] text-slate-500">
-                数据大小：{meta.dataMb} · 题目 {meta.problemsTotal ?? "—"} · 笔记 {meta.notesTotal ?? "—"} · 题解{" "}
-                {meta.solutionsTotal ?? "—"}
-              </div>
+              <div className="mt-0.5 text-[11px] text-slate-500">Workspace</div>
             </div>
           ) : null}
         </div>
@@ -168,7 +164,10 @@ export function Sidebar({
             </div>
             <ArrowUpRight className="mt-0.5 h-4 w-4 text-slate-500" />
           </div>
-          <div className="mt-2 text-[11px] text-slate-500">本地存储 · © {year}</div>
+          <div className="mt-2 text-[11px] text-slate-500">
+            数据大小：{meta.dataMb} · 题目 {meta.problemsTotal ?? "—"} · 笔记 {meta.notesTotal ?? "—"} · 题解{" "}
+            {meta.solutionsTotal ?? "—"}
+          </div>
         </NavLink>
       </div>
     </div>
