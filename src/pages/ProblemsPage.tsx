@@ -336,7 +336,9 @@ export default function ProblemsPage() {
                       </div>
                     </td>
                     <td className={cn("px-2", cellPy)}>
-                      <Badge tone={difficultyTone(p.difficulty)}>{difficultyLabel(p.difficulty)}</Badge>
+                      <Badge tone={difficultyTone(p.difficulty)} className="text-[12px] font-semibold tracking-wide">
+                        {difficultyLabel(p.difficulty)}
+                      </Badge>
                     </td>
                     <td className={cn("px-2", cellPy)}>
                       <Badge tone={statusTone(p.status)}>{statusLabel(p.status)}</Badge>

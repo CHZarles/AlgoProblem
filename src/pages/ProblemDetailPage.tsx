@@ -1005,7 +1005,9 @@ export default function ProblemDetailPage() {
                                     <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">
                                       {p.platform.toUpperCase()}
                                     </span>
-                                    <Badge tone={difficultyTone(p.difficulty)}>{difficultyLabel(p.difficulty)}</Badge>
+                                    <Badge tone={difficultyTone(p.difficulty)} className="text-[12px] font-semibold tracking-wide">
+                                      {difficultyLabel(p.difficulty)}
+                                    </Badge>
                                     <span>score {Math.round(p.score)}</span>
                                   </div>
                                 </div>

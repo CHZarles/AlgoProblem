@@ -95,7 +95,9 @@ export default function ReviewPage() {
                       <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">
                         {it.platform.toUpperCase()}
                       </span>
-                      <Badge tone={difficultyTone(it.difficulty)}>{difficultyLabel(it.difficulty)}</Badge>
+                      <Badge tone={difficultyTone(it.difficulty)} className="text-[12px] font-semibold tracking-wide">
+                        {difficultyLabel(it.difficulty)}
+                      </Badge>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                       <span>到期：{new Date(it.reviewNextAt).toLocaleDateString()}</span>
