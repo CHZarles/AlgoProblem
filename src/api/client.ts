@@ -226,6 +226,10 @@ export async function reorderCollection(collectionId: string, problemIds: string
 }
 
 export async function getStats(): Promise<{
+  dataBytes: number;
+  problemsTotal: number;
+  notesTotal: number;
+  solutionsTotal: number;
   problemsDone: number;
   solutionsDone: number;
   last30Activities: number;

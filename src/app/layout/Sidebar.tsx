@@ -43,6 +43,12 @@ function streakFromActivities(keys: Set<string>) {
   return streak;
 }
 
+function formatMb(bytes: number | null | undefined) {
+  const b = Number(bytes ?? 0);
+  if (!Number.isFinite(b) || b <= 0) return "—";
+  return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function Sidebar({
   collapsed,
   onToggle,
@@ -54,6 +60,15 @@ export function Sidebar({
   const year = useMemo(() => new Date().getFullYear(), []);
 
   const qStats = useApiQuery(() => getStats(), []);
+  const meta = useMemo(() => {
+    const s = qStats.data;
+    return {
+      dataMb: s ? formatMb(s.dataBytes) : "—",
+      problemsTotal: s?.problemsTotal ?? null,
+      notesTotal: s?.notesTotal ?? null,
+      solutionsTotal: s?.solutionsTotal ?? null,
+    };
+  }, [qStats.data]);
   const progress = useMemo(() => {
     if (!qStats.data) return { today: null as number | null, streak: null as number | null };
     const todayKeyNow = dayKey(new Date());
@@ -83,7 +98,10 @@ export function Sidebar({
           {!collapsed ? (
             <div>
               <div className="text-sm font-semibold text-slate-200">AlgoWorkspace</div>
-              <div className="mt-0.5 text-[11px] text-slate-500">Local · 无需登录 · 本机存储</div>
+              <div className="mt-0.5 text-[11px] text-slate-500">
+                数据大小：{meta.dataMb} · 题目 {meta.problemsTotal ?? "—"} · 笔记 {meta.notesTotal ?? "—"} · 题解{" "}
+                {meta.solutionsTotal ?? "—"}
+              </div>
             </div>
           ) : null}
         </div>

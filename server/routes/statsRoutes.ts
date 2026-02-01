@@ -2,6 +2,42 @@ import { Router } from "express";
 import type { WorkspaceRequest } from "../http";
 import { requireWorkspace } from "../http";
 import { db } from "../db";
+import fs from "node:fs";
+import path from "node:path";
+
+function safeDirSizeBytes(dir: string) {
+  try {
+    if (!fs.existsSync(dir)) return 0;
+    let total = 0;
+    const stack: string[] = [dir];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      let entries: fs.Dirent[] = [];
+      try {
+        entries = fs.readdirSync(cur, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const ent of entries) {
+        const full = path.join(cur, ent.name);
+        if (ent.isDirectory()) {
+          stack.push(full);
+          continue;
+        }
+        if (ent.isFile()) {
+          try {
+            total += fs.statSync(full).size;
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+    return total;
+  } catch {
+    return 0;
+  }
+}
 
 export function statsRoutes() {
   const r = Router();
@@ -10,6 +46,16 @@ export function statsRoutes() {
   r.get("/", (req, res) => {
     const workspaceId = (req as WorkspaceRequest).workspaceId;
     const d = db();
+    const problemsTotal = (d
+      .prepare("SELECT COUNT(1) as c FROM problems WHERE workspace_id = ?")
+      .get(workspaceId) as { c: number }).c;
+    const notesTotal = (d
+      .prepare("SELECT COUNT(1) as c FROM notes WHERE workspace_id = ?")
+      .get(workspaceId) as { c: number }).c;
+    const solutionsTotal = (d
+      .prepare("SELECT COUNT(1) as c FROM solutions WHERE workspace_id = ?")
+      .get(workspaceId) as { c: number }).c;
+
     const problemsDone = (d
       .prepare("SELECT COUNT(1) as c FROM problems WHERE workspace_id = ? AND status = 'done'")
       .get(workspaceId) as { c: number }).c;
@@ -41,7 +87,14 @@ export function statsRoutes() {
       .prepare("SELECT * FROM activities WHERE workspace_id = ? AND at >= ? ORDER BY at DESC")
       .all(workspaceId, since400) as Array<Record<string, unknown>>;
 
+    const dataDir = path.resolve(process.cwd(), ".data");
+    const dataBytes = safeDirSizeBytes(dataDir);
+
     return res.json({
+      dataBytes,
+      problemsTotal,
+      notesTotal,
+      solutionsTotal,
       problemsDone,
       solutionsDone,
       last30Activities,
