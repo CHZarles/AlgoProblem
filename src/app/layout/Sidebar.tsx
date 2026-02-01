@@ -83,7 +83,7 @@ export function Sidebar({
           {!collapsed ? (
             <div>
               <div className="text-sm font-semibold text-slate-200">AlgoWorkspace</div>
-              <div className="text-[11px] text-slate-500">单体 Workspace</div>
+              <div className="mt-0.5 text-[11px] text-slate-500">Local · 无需登录 · 本机存储</div>
             </div>
           ) : null}
         </div>
