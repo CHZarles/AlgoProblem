@@ -90,7 +90,7 @@ export async function setClassicNext(problemId: string, nextProblemId: string | 
   });
 }
 
-export async function patchProblem(problemId: string, patch: Partial<Pick<Problem, "title" | "tags">>) {
+export async function patchProblem(problemId: string, patch: Partial<Pick<Problem, "platform" | "title" | "tags">>) {
   return apiFetch<{ ok: true }>(`/problems/${problemId}`, { method: "PATCH", body: JSON.stringify(patch) });
 }
 

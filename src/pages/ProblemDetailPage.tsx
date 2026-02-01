@@ -93,14 +93,17 @@ function reviewWhenLabel(reviewNextAt?: string) {
 }
 
 function ProblemMetaEditor({
+  platform,
   title,
   tags,
   onPatch,
 }: {
+  platform: string;
   title: string;
   tags: string[];
-  onPatch: (patch: { title?: string; tags?: string[] }) => void;
+  onPatch: (patch: { platform?: string; title?: string; tags?: string[] }) => void;
 }) {
+  const [localPlatform, setLocalPlatform] = useState(platform);
   const [localTitle, setLocalTitle] = useState(title);
   const [tagsText, setTagsText] = useState(tags.join(", "));
   const debounced = useDebouncedCallback(onPatch, 450);
@@ -109,6 +112,16 @@ function ProblemMetaEditor({
     <div className="rounded-2xl bg-white/3 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
       <div className="text-sm font-semibold text-slate-200">元信息</div>
       <div className="mt-3 space-y-2">
+        <div className="text-xs text-slate-500">平台</div>
+        <Input
+          value={localPlatform}
+          onChange={(e) => {
+            const v = e.target.value;
+            setLocalPlatform(v);
+            debounced({ platform: v });
+          }}
+          placeholder="leetcode / acwing / codeforces / atcoder / ..."
+        />
         <div className="text-xs text-slate-500">标题</div>
         <Input
           value={localTitle}
@@ -763,6 +776,7 @@ export default function ProblemDetailPage() {
           <div className="sticky top-[72px] space-y-3">
             <ProblemMetaEditor
               key={problem.id}
+              platform={problem.platform}
               title={problem.title}
               tags={problem.tags}
               onPatch={(p) => {

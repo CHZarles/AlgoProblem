@@ -778,6 +778,7 @@ ${rawMarkdown}
     const workspaceId = (req as WorkspaceRequest).workspaceId;
     const d = db();
     const Body = z.object({
+      platform: z.string().min(1).max(64).optional(),
       title: z.string().min(1).optional(),
       tags: z.array(z.string().min(1)).optional(),
     });
@@ -792,6 +793,10 @@ ${rawMarkdown}
 
     const fields: string[] = [];
     const params: unknown[] = [];
+    if (body.data.platform) {
+      fields.push("platform = ?");
+      params.push(body.data.platform.trim().toLowerCase());
+    }
     if (body.data.title) {
       fields.push("title = ?");
       params.push(body.data.title);
