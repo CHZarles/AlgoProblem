@@ -10,6 +10,8 @@ type SettingsResponse = {
   llmModel: string;
   llmApiKeySet: boolean;
   llmApiKeyLast4?: string;
+  acwingCookieSet: boolean;
+  acwingCookieLast4?: string;
 };
 
 function normalizeBaseUrl(input: string) {
@@ -29,7 +31,7 @@ export function settingsRoutes() {
       .prepare("SELECT key, value FROM settings WHERE workspace_id = ?")
       .all(workspaceId) as Array<{ key: string; value: string }>;
 
-    const out: SettingsResponse = { llmBaseUrl: "", llmModel: "", llmApiKeySet: false };
+    const out: SettingsResponse = { llmBaseUrl: "", llmModel: "", llmApiKeySet: false, acwingCookieSet: false };
     for (const row of rows) {
       if (row.key === "llm_base_url") out.llmBaseUrl = row.value;
       if (row.key === "llm_model") out.llmModel = row.value;
@@ -38,6 +40,13 @@ export function settingsRoutes() {
         if (v) {
           out.llmApiKeySet = true;
           out.llmApiKeyLast4 = v.length >= 4 ? v.slice(-4) : v;
+        }
+      }
+      if (row.key === "acwing_cookie") {
+        const v = row.value.trim();
+        if (v) {
+          out.acwingCookieSet = true;
+          out.acwingCookieLast4 = v.length >= 4 ? v.slice(-4) : v;
         }
       }
     }
@@ -49,6 +58,7 @@ export function settingsRoutes() {
       llmBaseUrl: z.string().optional(),
       llmModel: z.string().optional(),
       llmApiKey: z.string().optional(),
+      acwingCookie: z.string().optional(),
     });
     const body = Body.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "invalid_request" });
@@ -78,6 +88,11 @@ export function settingsRoutes() {
       if (!raw) updates.push({ key: "llm_api_key", value: undefined });
       else updates.push({ key: "llm_api_key", value: raw });
     }
+    if (body.data.acwingCookie !== undefined) {
+      const raw = body.data.acwingCookie.trim();
+      if (!raw) updates.push({ key: "acwing_cookie", value: undefined });
+      else updates.push({ key: "acwing_cookie", value: raw });
+    }
 
     const tx = d.transaction(() => {
       for (const u of updates) {
@@ -95,6 +110,35 @@ export function settingsRoutes() {
     tx();
 
     return res.json({ ok: true });
+  });
+
+  r.post("/test-acwing", async (req, res) => {
+    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const Body = z.object({ url: z.string().min(1) });
+    const body = Body.safeParse(req.body);
+    if (!body.success) return res.status(400).json({ error: "invalid_request" });
+
+    const d = db();
+    const cookie = (
+      d.prepare("SELECT value FROM settings WHERE workspace_id = ? AND key = 'acwing_cookie'")
+        .get(workspaceId) as { value: string } | undefined
+    )?.value?.trim();
+
+    try {
+      const resp = await fetch(body.data.url.trim(), {
+        headers: {
+          "user-agent": "AlgoWorkspace/1.0",
+          ...(cookie ? { cookie } : {}),
+        },
+      });
+      if (!resp.ok) return res.status(400).json({ ok: false, error: `http_${resp.status}` });
+      const html = await resp.text();
+      const title = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() ?? "";
+      return res.json({ ok: true, title: title.slice(0, 120) });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "unknown_error";
+      return res.status(400).json({ ok: false, error: msg });
+    }
   });
 
   r.post("/test-llm", async (req, res) => {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { load } from "cheerio";
-import { fetchStructured, type IngestedProblem } from "./ingest";
+import { fetchStructured, type FetchStructuredOptions, type IngestedProblem } from "./ingest";
 import { htmlToMarkdown } from "./markdown";
 import { llmChatWithMeta, type LlmConfig } from "./llm";
 
@@ -159,12 +159,12 @@ async function extractFromHtml(input: {
   };
 }
 
-export async function ingestWithLlm(url: string, config: LlmConfig): Promise<IngestedProblem> {
+export async function ingestWithLlm(url: string, config: LlmConfig, opts?: FetchStructuredOptions): Promise<IngestedProblem> {
   // If it's a supported platform (LeetCode / AcWing), fetch the statement via structured endpoints first
   // (avoids Cloudflare pages) and let LLM turn the statement HTML into Markdown.
   let structured: Awaited<ReturnType<typeof fetchStructured>> | null = null;
   try {
-    structured = await fetchStructured(url);
+    structured = await fetchStructured(url, opts);
   } catch {
     structured = null;
   }

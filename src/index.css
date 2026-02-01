@@ -297,3 +297,17 @@ body {
 .theme-autumn .shadow-panel {
   box-shadow: 0 1px 0 rgba(61, 39, 23, 0.06), 0 12px 40px rgba(61, 39, 23, 0.14);
 }
+
+/* Native select dropdown (options) */
+.theme-dark select option {
+  background-color: rgb(15 21 32);
+  color: rgb(226 232 240);
+}
+.theme-light select option {
+  background-color: rgb(255 255 255);
+  color: rgb(15 23 42);
+}
+.theme-autumn select option {
+  background-color: rgb(255 250 244);
+  color: rgb(32 25 20);
+}

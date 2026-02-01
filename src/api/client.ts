@@ -295,6 +295,8 @@ export type Settings = {
   llmModel: string;
   llmApiKeySet: boolean;
   llmApiKeyLast4?: string;
+  acwingCookieSet: boolean;
+  acwingCookieLast4?: string;
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -305,10 +307,15 @@ export async function patchSettings(patch: {
   llmBaseUrl?: string;
   llmModel?: string;
   llmApiKey?: string;
+  acwingCookie?: string;
 }): Promise<{ ok: true }> {
   return apiFetch("/settings", { method: "PATCH", body: JSON.stringify(patch) });
 }
 
 export async function testLlm(): Promise<{ ok: true; content: string; requestId?: string; model?: string; id?: string }> {
   return apiFetch("/settings/test-llm", { method: "POST", body: JSON.stringify({}) });
+}
+
+export async function testAcwing(url: string): Promise<{ ok: true; title?: string }> {
+  return apiFetch("/settings/test-acwing", { method: "POST", body: JSON.stringify({ url }) });
 }

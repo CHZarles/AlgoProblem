@@ -17,6 +17,7 @@ export type IngestedProblem = {
 };
 
 export type StructuredFetchedProblem = Omit<IngestedProblem, "markdown"> & { contentHtml: string };
+export type FetchStructuredOptions = { acwingCookie?: string };
 
 function toDifficulty(raw: string | null | undefined): IngestedProblem["difficulty"] {
   if (!raw) return "unknown";
@@ -198,10 +199,14 @@ async function fetchLeetCode(slug: string, prefer: "cn" | "com") {
   throw new Error(`LeetCode 抓取失败（${lastStatus || "network"}）`);
 }
 
-async function fetchAcWing(id: string) {
+async function fetchAcWing(id: string, opts?: FetchStructuredOptions) {
   const url = `https://www.acwing.com/problem/content/description/${id}/`;
   const resp = await fetch(url, {
-    headers: { "user-agent": "AlgoWorkspace/1.0" },
+    headers: {
+      "user-agent": "AlgoWorkspace/1.0",
+      ...(opts?.acwingCookie ? { cookie: opts.acwingCookie } : {}),
+      referer: `https://www.acwing.com/problem/content/${id}/`,
+    },
   });
   if (!resp.ok) throw new Error(`AcWing 抓取失败（${resp.status}）`);
   const html = await resp.text();
@@ -218,7 +223,7 @@ async function fetchAcWing(id: string) {
   return { title, contentHtml };
 }
 
-export async function fetchStructured(url: string): Promise<StructuredFetchedProblem> {
+export async function fetchStructured(url: string, opts?: FetchStructuredOptions): Promise<StructuredFetchedProblem> {
   const warnings: string[] = [];
 
   try {
@@ -247,7 +252,7 @@ export async function fetchStructured(url: string): Promise<StructuredFetchedPro
     }
 
     if (parsed.platform === "acwing") {
-      const v = await fetchAcWing(parsed.externalId!);
+      const v = await fetchAcWing(parsed.externalId!, opts);
       const title = v.title;
       const contentHtml = v.contentHtml;
       const difficulty: IngestedProblem["difficulty"] = "unknown";
@@ -285,8 +290,8 @@ export async function fetchStructured(url: string): Promise<StructuredFetchedPro
   };
 }
 
-export async function ingestOne(url: string): Promise<IngestedProblem> {
-  const fetched = await fetchStructured(url);
+export async function ingestOne(url: string, opts?: FetchStructuredOptions): Promise<IngestedProblem> {
+  const fetched = await fetchStructured(url, opts);
   const md = htmlToMarkdown(fetched.contentHtml);
   const markdown = `---
 source: ${fetched.platform}

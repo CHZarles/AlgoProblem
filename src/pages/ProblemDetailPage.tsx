@@ -144,7 +144,7 @@ function ProblemMetaEditor({
                 setLocalDifficulty(v);
                 debounced({ difficulty: v });
               }}
-              className="h-9 w-full rounded-lg bg-white/4 px-3 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/35"
+              className="h-9 w-full rounded-lg bg-[#0F1520] px-3 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/35"
             >
               <option value="unknown">未知</option>
               <option value="easy">简单</option>
@@ -154,15 +154,14 @@ function ProblemMetaEditor({
           </div>
           <div className="col-span-5">
             <Input
-              type="number"
-              min={0}
-              max={5000}
+              inputMode="numeric"
               value={localScore}
               onChange={(e) => {
                 const raw = e.target.value;
-                setLocalScore(raw);
-                if (!raw.trim()) return debounced({ difficultyScore: null });
-                const n = Number(raw);
+                const digits = raw.replace(/[^\d]/g, "");
+                setLocalScore(digits);
+                if (!digits.trim()) return debounced({ difficultyScore: null });
+                const n = Number(digits);
                 if (!Number.isFinite(n)) return;
                 debounced({ difficultyScore: Math.max(0, Math.min(5000, Math.round(n))) });
               }}
@@ -304,7 +303,7 @@ function SolutionEditor({
               setLanguage(v);
               debounced({ language: v });
             }}
-            className="h-9 w-full rounded-lg bg-white/4 px-3 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
+            className="h-9 w-full rounded-lg bg-[#0F1520] px-3 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
           >
             <option value="cpp">C++</option>
             <option value="java">Java</option>

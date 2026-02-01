@@ -22,6 +22,15 @@ function readLlmConfig(workspaceId: string) {
   return { baseUrl, model, apiKey };
 }
 
+function readAcwingCookie(workspaceId: string) {
+  const d = db();
+  const v = (
+    d.prepare("SELECT value FROM settings WHERE workspace_id = ? AND key = 'acwing_cookie'")
+      .get(workspaceId) as { value: string } | undefined
+  )?.value?.trim();
+  return v || undefined;
+}
+
 function parseJsonArray(raw: string) {
   try {
     const v = JSON.parse(raw) as unknown;
@@ -253,6 +262,7 @@ export function problemsRoutes() {
     const workspaceId = (req as WorkspaceRequest).workspaceId;
     const d = db();
     const llm = readLlmConfig(workspaceId);
+    const acwingCookie = readAcwingCookie(workspaceId);
 
     const results: Array<
       | { url: string; ok: true; problem: unknown; warnings: string[] }
@@ -271,13 +281,13 @@ export function problemsRoutes() {
         const ingestWarnings: string[] = [];
         if (llm) {
           try {
-            ingested = await ingestWithLlm(url, llm);
+            ingested = await ingestWithLlm(url, llm, { acwingCookie });
           } catch (e) {
             ingestWarnings.push(`LLM 抽取失败，已回退结构化抓取：${e instanceof Error ? e.message : "unknown_error"}`);
-            ingested = await ingestOne(url);
+            ingested = await ingestOne(url, { acwingCookie });
           }
         } else {
-          ingested = await ingestOne(url);
+          ingested = await ingestOne(url, { acwingCookie });
         }
         const ts = nowIso();
         const existing = d

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Input } from "../app/components/Input";
 import { Button } from "../app/components/Button";
 import { cn } from "../lib/cn";
-import { getSettings, patchSettings, testLlm } from "../api/client";
+import { getSettings, patchSettings, testAcwing, testLlm } from "../api/client";
 import { useApiQuery } from "../api/hooks";
 import { ApiError } from "../api/http";
 import { useTheme, type ThemePreference } from "../app/theme";
@@ -15,6 +15,8 @@ export default function SettingsPage() {
   const [llmBaseUrl, setLlmBaseUrl] = useState("");
   const [llmModel, setLlmModel] = useState("");
   const [llmApiKey, setLlmApiKey] = useState("");
+  const [acwingCookie, setAcwingCookie] = useState("");
+  const [acwingTestUrl, setAcwingTestUrl] = useState("https://www.acwing.com/problem/content/787/");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -30,9 +32,11 @@ export default function SettingsPage() {
         llmBaseUrl,
         llmModel,
         ...(llmApiKey.trim() ? { llmApiKey: llmApiKey.trim() } : {}),
+        ...(acwingCookie.trim() ? { acwingCookie: acwingCookie.trim() } : {}),
       });
       toast.success("已保存设置");
       setLlmApiKey("");
+      setAcwingCookie("");
       q.reload();
     } catch (e) {
       const err = e instanceof ApiError ? e : null;
@@ -52,7 +56,7 @@ export default function SettingsPage() {
     <div className="space-y-4">
       <div>
         <div className="text-lg font-semibold text-slate-50">设置</div>
-        <div className="mt-1 text-sm text-slate-500">配置 Workspace 行为（例如：LLM 抽取题面）。</div>
+        <div className="mt-1 text-sm text-slate-500">配置 Workspace 行为（LLM / 抓取 Cookie）。</div>
       </div>
 
       <div
@@ -261,6 +265,98 @@ export default function SettingsPage() {
           </Button>
           {q.loading ? <div className="ml-auto text-xs text-slate-500">加载中…</div> : null}
           {q.error ? <div className="ml-auto text-xs text-rose-300">加载失败：{q.error.message}</div> : null}
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "rounded-2xl bg-white/3 p-4 shadow-panel",
+          "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+        )}
+      >
+        <div className="text-sm font-semibold text-slate-200">AcWing Cookie（可选）</div>
+        <div className="mt-1 text-sm text-slate-500">用于抓取需要登录才能访问的 AcWing 题面（存储在本地 DB）。</div>
+
+        <div className="mt-4 grid gap-3">
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-medium text-slate-300">Cookie</div>
+              {q.data?.acwingCookieSet ? (
+                <div className="text-[11px] text-slate-500">已设置（••••{q.data.acwingCookieLast4 ?? "****"}）</div>
+              ) : (
+                <div className="text-[11px] text-slate-500">未设置</div>
+              )}
+            </div>
+            <div className="mt-1">
+              <Input
+                value={acwingCookie}
+                onChange={(e) => setAcwingCookie(e.target.value)}
+                placeholder="粘贴你的 Cookie（存储在本地 DB）"
+                type="password"
+                spellCheck={false}
+              />
+            </div>
+            <div className="mt-1 text-xs text-slate-500">留空不会覆盖已保存的 Cookie；如需清除请使用「清除 Cookie」按钮。</div>
+          </div>
+
+          <div className="grid grid-cols-12 gap-2">
+            <div className="col-span-12 md:col-span-8">
+              <Input
+                value={acwingTestUrl}
+                onChange={(e) => setAcwingTestUrl(e.target.value)}
+                placeholder="测试链接（如 https://www.acwing.com/problem/content/787/ ）"
+                spellCheck={false}
+              />
+            </div>
+            <div className="col-span-12 md:col-span-4">
+              <Button
+                variant="secondary"
+                className="w-full"
+                disabled={q.loading || saving}
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    const r = await testAcwing(acwingTestUrl);
+                    toast.success(r.title ? `抓取成功：${r.title}` : "抓取成功");
+                  } catch (e) {
+                    const err = e instanceof ApiError ? e : null;
+                    toast.error(err?.message ? `抓取失败：${err.message}` : "抓取失败");
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                测试抓取
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-2">
+          <Button variant="primary" disabled={q.loading || saving} onClick={save}>
+            {saving ? "保存中…" : "保存"}
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={q.loading || saving || !q.data?.acwingCookieSet}
+            onClick={async () => {
+              const ok = window.confirm("确认清除已保存的 AcWing Cookie？");
+              if (!ok) return;
+              setSaving(true);
+              try {
+                await patchSettings({ acwingCookie: "" });
+                toast.success("已清除 Cookie");
+                setAcwingCookie("");
+                q.reload();
+              } catch {
+                toast.error("清除失败");
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            清除 Cookie
+          </Button>
         </div>
       </div>
     </div>
