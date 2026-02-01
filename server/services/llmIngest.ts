@@ -170,8 +170,9 @@ export async function ingestWithLlm(url: string, config: LlmConfig, opts?: Fetch
   }
 
   if (structured) {
-    // LeetCode: prefer structured conversion to avoid LLM rewriting numbers/formulas.
-    if (structured.platform === "leetcode") {
+    // Prefer structured conversion for platforms where the statement HTML is already "clean enough".
+    // This avoids LLM rewriting numbers/formulas and also keeps original layout more faithfully.
+    if (structured.platform === "leetcode" || structured.platform === "acwing") {
       const md = htmlToMarkdown(structured.contentHtml);
       const markdown = `---
 source: structured
@@ -193,7 +194,12 @@ ${md}
         difficulty: structured.difficulty,
         tags: structured.tags,
         markdown,
-        warnings: [...structured.warnings, "LeetCode 已使用结构化抓取（避免数字/公式被改写）"],
+        warnings: [
+          ...structured.warnings,
+          structured.platform === "leetcode"
+            ? "LeetCode 已使用结构化抓取（避免数字/公式被改写）"
+            : "AcWing 已使用结构化抓取（保留原题排版）",
+        ],
       };
     }
 
