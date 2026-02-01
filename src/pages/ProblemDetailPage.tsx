@@ -137,20 +137,44 @@ function ProblemMetaEditor({
         <div className="text-xs text-slate-500">难度</div>
         <div className="grid grid-cols-12 gap-2">
           <div className="col-span-7">
-            <select
-              value={localDifficulty}
-              onChange={(e) => {
-                const v = e.target.value as Difficulty;
-                setLocalDifficulty(v);
-                debounced({ difficulty: v });
-              }}
-              className="h-9 w-full rounded-lg bg-[#0F1520] px-3 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/35"
+            <div
+              role="radiogroup"
+              aria-label="难度"
+              className={cn(
+                "flex h-9 items-center gap-1 rounded-lg bg-black/10 p-1",
+                "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+              )}
             >
-              <option value="unknown">未知</option>
-              <option value="easy">简单</option>
-              <option value="medium">中等</option>
-              <option value="hard">困难</option>
-            </select>
+              {(
+                [
+                  { v: "unknown" as const, label: "未知", active: "bg-white/8 text-slate-200" },
+                  { v: "easy" as const, label: "简单", active: "bg-emerald-500/18 text-emerald-200" },
+                  { v: "medium" as const, label: "中等", active: "bg-amber-500/18 text-amber-200" },
+                  { v: "hard" as const, label: "困难", active: "bg-rose-500/18 text-rose-200" },
+                ] as const
+              ).map((x) => {
+                const selected = localDifficulty === x.v;
+                return (
+                  <button
+                    key={x.v}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => {
+                      setLocalDifficulty(x.v);
+                      debounced({ difficulty: x.v });
+                    }}
+                    className={cn(
+                      "h-7 flex-1 rounded-md px-2 text-[12px] font-semibold tracking-wide transition",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/35",
+                      selected ? x.active : "text-slate-400 hover:bg-white/6 hover:text-slate-200",
+                    )}
+                  >
+                    {x.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="col-span-5">
             <Input
