@@ -1,5 +1,5 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Check, ChevronsUpDown, Laptop, Moon, Palette, Rows3, Search, Sparkles, Sun } from "lucide-react";
+import { Check, ChevronsUpDown, Leaf, Moon, Rows3, Search, Sparkles, Sun } from "lucide-react";
 import { Button } from "../components/Button";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../theme";
@@ -15,9 +15,8 @@ export function Topbar({
   const theme = useTheme();
   const density = useDensity();
   const meta = (() => {
-    if (theme.preference === "system") return { Icon: Laptop, label: "系统", iconClass: "text-slate-400" };
     if (theme.preference === "light") return { Icon: Sun, label: "浅色", iconClass: "text-amber-400" };
-    if (theme.preference === "cream") return { Icon: Palette, label: "米白", iconClass: "text-[#B0893B]" };
+    if (theme.preference === "autumn") return { Icon: Leaf, label: "秋天", iconClass: "text-[#B45309]" };
     return { Icon: Moon, label: "深色", iconClass: "text-indigo-300" };
   })();
 
@@ -57,22 +56,6 @@ export function Topbar({
               className="w-40 rounded-xl bg-[#0F1520] p-1 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel"
             >
               <DropdownMenu.Item
-                onSelect={() => theme.setPreference("system")}
-                className={cn(
-                  "flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm outline-none",
-                  "text-slate-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-slate-50",
-                  theme.preference === "system" && "bg-white/4",
-                )}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-                    <Laptop className="h-4 w-4 text-slate-400" />
-                  </span>
-                  <span className="font-medium">跟随系统</span>
-                </span>
-                {theme.preference === "system" ? <Check className="h-4 w-4 text-sky-500" /> : null}
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
                 onSelect={() => theme.setPreference("light")}
                 className={cn(
                   "flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm outline-none",
@@ -89,20 +72,20 @@ export function Topbar({
                 {theme.preference === "light" ? <Check className="h-4 w-4 text-sky-500" /> : null}
               </DropdownMenu.Item>
               <DropdownMenu.Item
-                onSelect={() => theme.setPreference("cream")}
+                onSelect={() => theme.setPreference("autumn")}
                 className={cn(
                   "flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm outline-none",
                   "text-slate-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-slate-50",
-                  theme.preference === "cream" && "bg-white/4",
+                  theme.preference === "autumn" && "bg-white/4",
                 )}
               >
                 <span className="inline-flex items-center gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#EAD9B7]/35 shadow-[0_0_0_1px_rgba(176,137,59,0.28)]">
-                    <Palette className="h-4 w-4 text-[#B0893B]" />
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#F4D6B0]/45 shadow-[0_0_0_1px_rgba(180,83,9,0.26)]">
+                    <Leaf className="h-4 w-4 text-[#B45309]" />
                   </span>
-                  <span className="font-medium">米白（护眼）</span>
+                  <span className="font-medium">秋天</span>
                 </span>
-                {theme.preference === "cream" ? <Check className="h-4 w-4 text-sky-500" /> : null}
+                {theme.preference === "autumn" ? <Check className="h-4 w-4 text-sky-500" /> : null}
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 onSelect={() => theme.setPreference("dark")}

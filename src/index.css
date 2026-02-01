@@ -20,14 +20,15 @@
   --scrollbar-track-border: rgba(248, 250, 252, 1);
 }
 
-.theme-cream {
+.theme-autumn {
   color-scheme: light;
-  --app-bg: #f6f2e8;
-  --app-fg: rgb(30 41 59);
+  /* Autumn: warm paper + deeper ink, high readability */
+  --app-bg: #fbf3e6;
+  --app-fg: rgb(32 25 20);
 
-  --scrollbar-thumb: rgba(71, 85, 105, 0.18);
-  --scrollbar-thumb-hover: rgba(71, 85, 105, 0.28);
-  --scrollbar-track-border: rgba(246, 242, 232, 1);
+  --scrollbar-thumb: rgba(61, 39, 23, 0.18);
+  --scrollbar-thumb-hover: rgba(61, 39, 23, 0.28);
+  --scrollbar-track-border: rgba(251, 243, 230, 1);
 }
 
 html,
@@ -176,118 +177,123 @@ body {
 }
 
 /* highlight.js: make code blocks match light-ish themes */
-.theme-light .hljs,
-.theme-cream .hljs {
+.theme-light .hljs {
   background: transparent !important;
   color: inherit;
 }
 
-/* Theme: cream (warm, eye-friendly) */
-.theme-cream .bg-\[\#0B0F14\] {
-  background-color: rgb(246 242 232);
-}
-.theme-cream .bg-\[\#0B0F14\]\/80 {
-  background-color: rgb(246 242 232 / 0.84);
-}
-.theme-cream .bg-\[\#0F1520\] {
-  background-color: rgb(251 248 241);
+/* Theme: autumn (warm, crisp) */
+.theme-autumn .hljs {
+  background: transparent !important;
+  color: inherit;
 }
 
-.theme-cream .bg-white\/3 {
-  background-color: rgba(71, 56, 39, 0.04);
+/* Theme: autumn (override common Tailwind utility colors used by the app) */
+.theme-autumn .bg-\[\#0B0F14\] {
+  background-color: rgb(251 243 230);
 }
-.theme-cream .bg-white\/4 {
-  background-color: rgba(71, 56, 39, 0.05);
+.theme-autumn .bg-\[\#0B0F14\]\/80 {
+  background-color: rgb(251 243 230 / 0.86);
 }
-.theme-cream .bg-white\/5 {
-  background-color: rgba(71, 56, 39, 0.06);
-}
-.theme-cream .bg-white\/6 {
-  background-color: rgba(71, 56, 39, 0.07);
-}
-.theme-cream .bg-white\/7 {
-  background-color: rgba(71, 56, 39, 0.08);
-}
-.theme-cream .bg-white\/8 {
-  background-color: rgba(71, 56, 39, 0.1);
-}
-.theme-cream .bg-white\/9 {
-  background-color: rgba(71, 56, 39, 0.11);
-}
-.theme-cream .bg-white\/10 {
-  background-color: rgba(71, 56, 39, 0.12);
+.theme-autumn .bg-\[\#0F1520\] {
+  background-color: rgb(255 250 244);
 }
 
-.theme-cream .hover\:bg-white\/4:hover {
-  background-color: rgba(71, 56, 39, 0.06);
+.theme-autumn .bg-white\/3 {
+  background-color: rgba(61, 39, 23, 0.04);
 }
-.theme-cream .hover\:bg-white\/6:hover {
-  background-color: rgba(71, 56, 39, 0.1);
+.theme-autumn .bg-white\/4 {
+  background-color: rgba(61, 39, 23, 0.05);
 }
-.theme-cream .hover\:bg-white\/7:hover {
-  background-color: rgba(71, 56, 39, 0.12);
+.theme-autumn .bg-white\/5 {
+  background-color: rgba(61, 39, 23, 0.06);
 }
-.theme-cream .hover\:bg-white\/9:hover {
-  background-color: rgba(71, 56, 39, 0.14);
+.theme-autumn .bg-white\/6 {
+  background-color: rgba(61, 39, 23, 0.07);
 }
-
-.theme-cream .border-white\/8 {
-  border-color: rgba(71, 56, 39, 0.14);
+.theme-autumn .bg-white\/7 {
+  background-color: rgba(61, 39, 23, 0.08);
 }
-.theme-cream .border-white\/6 {
-  border-color: rgba(71, 56, 39, 0.12);
+.theme-autumn .bg-white\/8 {
+  background-color: rgba(61, 39, 23, 0.1);
 }
-.theme-cream .divide-white\/8 > :not([hidden]) ~ :not([hidden]) {
-  border-color: rgba(71, 56, 39, 0.14);
+.theme-autumn .bg-white\/9 {
+  background-color: rgba(61, 39, 23, 0.11);
 }
-
-.theme-cream .text-slate-50 {
-  color: rgb(30 41 59);
-}
-.theme-cream .text-slate-100 {
-  color: rgb(30 41 59);
-}
-.theme-cream .text-slate-200 {
-  color: rgb(51 65 85);
-}
-.theme-cream .text-slate-300 {
-  color: rgb(71 85 105);
-}
-.theme-cream .text-slate-400 {
-  color: rgb(100 116 139);
-}
-.theme-cream .hover\:text-slate-100:hover {
-  color: rgb(30 41 59);
+.theme-autumn .bg-white\/10 {
+  background-color: rgba(61, 39, 23, 0.12);
 }
 
-/* Theme: cream (fix accent colors for readability) */
-.theme-cream .text-sky-200,
-.theme-cream .text-sky-300 {
-  color: rgb(3 105 161);
+.theme-autumn .hover\:bg-white\/4:hover {
+  background-color: rgba(61, 39, 23, 0.06);
 }
-.theme-cream .text-sky-300\/80 {
-  color: rgb(3 105 161 / 0.85);
+.theme-autumn .hover\:bg-white\/6:hover {
+  background-color: rgba(61, 39, 23, 0.1);
 }
-.theme-cream .text-sky-500 {
-  color: rgb(3 105 161);
+.theme-autumn .hover\:bg-white\/7:hover {
+  background-color: rgba(61, 39, 23, 0.12);
 }
-.theme-cream .text-emerald-300 {
+.theme-autumn .hover\:bg-white\/9:hover {
+  background-color: rgba(61, 39, 23, 0.14);
+}
+
+.theme-autumn .border-white\/8 {
+  border-color: rgba(61, 39, 23, 0.16);
+}
+.theme-autumn .border-white\/6 {
+  border-color: rgba(61, 39, 23, 0.13);
+}
+.theme-autumn .divide-white\/8 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(61, 39, 23, 0.16);
+}
+
+.theme-autumn .text-slate-50 {
+  color: rgb(32 25 20);
+}
+.theme-autumn .text-slate-100 {
+  color: rgb(32 25 20);
+}
+.theme-autumn .text-slate-200 {
+  color: rgb(55 34 22);
+}
+.theme-autumn .text-slate-300 {
+  color: rgb(74 50 36);
+}
+.theme-autumn .text-slate-400 {
+  color: rgb(98 73 55);
+}
+.theme-autumn .hover\:text-slate-100:hover {
+  color: rgb(32 25 20);
+}
+
+/* Theme: autumn (fix accent colors for readability) */
+.theme-autumn .text-sky-200,
+.theme-autumn .text-sky-300 {
+  color: rgb(2 96 142);
+}
+.theme-autumn .text-sky-300\/80 {
+  color: rgb(2 96 142 / 0.85);
+}
+.theme-autumn .text-sky-500 {
+  color: rgb(2 96 142);
+}
+.theme-autumn .text-emerald-300 {
   color: rgb(4 120 87);
 }
-.theme-cream .text-amber-300,
-.theme-cream .text-amber-400 {
-  color: rgb(180 83 9);
+.theme-autumn .text-amber-300,
+.theme-autumn .text-amber-400 {
+  color: rgb(154 66 9);
 }
-.theme-cream .text-orange-300 {
-  color: rgb(194 65 12);
+.theme-autumn .text-orange-300 {
+  color: rgb(180 71 16);
 }
-.theme-cream .text-rose-300 {
-  color: rgb(190 18 60);
+.theme-autumn .text-rose-300 {
+  color: rgb(175 20 66);
 }
-.theme-cream .text-indigo-300 {
+.theme-autumn .text-indigo-300 {
   color: rgb(67 56 202);
 }
 
-.theme-cream .shadow-panel {
-  box-shadow: 0 1px 0 rgba(71, 56, 39, 0.06), 0 12px 40px rgba(71, 56, 39, 0.14);
+.theme-autumn .shadow-panel {
+  box-shadow: 0 1px 0 rgba(61, 39, 23, 0.06), 0 12px 40px rgba(61, 39, 23, 0.14);
 }

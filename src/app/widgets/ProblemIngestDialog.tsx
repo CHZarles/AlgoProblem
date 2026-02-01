@@ -198,7 +198,7 @@ export function ProblemIngestDialog({
             <div>
               <div className="text-sm font-semibold text-slate-200">收集题目</div>
               <div className="mt-1 text-sm text-slate-500">
-                支持从 URL 抓取题面或手动粘贴 Markdown 题面（LeetCode 优先结构化抓取；其他链接可用 LLM 抽取）。
+                支持从 URL 抓取题面或手动粘贴 Markdown。LeetCode 优先结构化抓取；其他链接若已配置 LLM 则优先 LLM（失败回退通用抓取）。
               </div>
             </div>
             <Dialog.Close asChild>
@@ -324,7 +324,7 @@ export function ProblemIngestDialog({
                 )}
               </div>
               <div className="mt-3 rounded-xl bg-white/3 p-3 text-xs text-slate-400 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-                题面规则：每道题必须有 Markdown 题面。LeetCode 默认结构化抓取（避免数字/公式/样例被改写）；其他链接若配置了 LLM，会优先用 LLM 抽取（失败则回退通用抓取）。
+                题面规则：入库必须有 Markdown 题面（支持 LaTeX）。LeetCode 优先结构化抓取，尽量不改动数字/公式/样例；其他链接优先 LLM（如已配置，失败回退通用抓取）；也可手动粘贴 Markdown。
               </div>
             </div>
           </div>

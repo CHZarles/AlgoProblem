@@ -396,16 +396,17 @@ export default function ProblemsPage() {
                               </DropdownMenu.Item>
                               <DropdownMenu.Item
                                 onSelect={() => {
-                                  setProblemStatus(p.id, "done")
+                                  const next = p.status === "done" ? "todo" : "done";
+                                  setProblemStatus(p.id, next)
                                     .then(() => {
-                                      toast.success("已标记为已做");
+                                      toast.success(next === "done" ? "已标记为已做" : "已撤销已做");
                                       qProblems.reload();
                                     })
                                     .catch(() => toast.error("更新失败"));
                                 }}
                                 className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6"
                               >
-                                标记已做
+                                {p.status === "done" ? "撤销已做" : "标记已做"}
                               </DropdownMenu.Item>
                               <DropdownMenu.Separator className="my-1 h-px bg-white/8" />
                               <DropdownMenu.Item

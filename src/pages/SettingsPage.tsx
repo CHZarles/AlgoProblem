@@ -7,7 +7,7 @@ import { getSettings, patchSettings, testLlm } from "../api/client";
 import { useApiQuery } from "../api/hooks";
 import { ApiError } from "../api/http";
 import { useTheme, type ThemePreference } from "../app/theme";
-import { Check, Laptop, Moon, Palette, Sun } from "lucide-react";
+import { Check, Leaf, Moon, Sun } from "lucide-react";
 
 export default function SettingsPage() {
   const theme = useTheme();
@@ -62,23 +62,15 @@ export default function SettingsPage() {
         )}
       >
         <div className="text-sm font-semibold text-slate-200">外观</div>
-        <div className="mt-1 text-sm text-slate-500">主题切换：跟随系统 / 浅色 / 米白 / 深色（偏好存储在本地浏览器）。</div>
+        <div className="mt-1 text-sm text-slate-500">主题切换：浅色 / 秋天 / 深色（偏好存储在本地浏览器）。</div>
 
         <div className="mt-4 grid gap-3">
           <div>
             <div className="text-xs font-medium text-slate-300">Theme</div>
             <div className="mt-1">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="Theme">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Theme">
                 {(
                   [
-                    {
-                      value: "system",
-                      label: "系统",
-                      hint: "自动",
-                      Icon: Laptop,
-                      iconClass: "text-slate-400",
-                      iconWrap: "bg-white/4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
-                    },
                     {
                       value: "light",
                       label: "浅色",
@@ -88,12 +80,12 @@ export default function SettingsPage() {
                       iconWrap: "bg-amber-500/14 shadow-[0_0_0_1px_rgba(245,158,11,0.22)]",
                     },
                     {
-                      value: "cream",
-                      label: "米白",
-                      hint: "护眼",
-                      Icon: Palette,
-                      iconClass: "text-[#B0893B]",
-                      iconWrap: "bg-[#EAD9B7]/35 shadow-[0_0_0_1px_rgba(176,137,59,0.28)]",
+                      value: "autumn",
+                      label: "秋天",
+                      hint: "暖色",
+                      Icon: Leaf,
+                      iconClass: "text-[#B45309]",
+                      iconWrap: "bg-[#F4D6B0]/45 shadow-[0_0_0_1px_rgba(180,83,9,0.26)]",
                     },
                     {
                       value: "dark",
@@ -136,7 +128,11 @@ export default function SettingsPage() {
             </div>
             <div className="mt-1 text-xs text-slate-500">
               当前生效：
-              {theme.preference === "cream" ? "米白" : theme.resolved === "light" ? "浅色" : "深色"}
+              {theme.preference === "autumn"
+                ? "秋天"
+                : theme.resolved === "light"
+                  ? "浅色"
+                  : "深色"}
             </div>
           </div>
         </div>
@@ -150,7 +146,7 @@ export default function SettingsPage() {
       >
         <div className="text-sm font-semibold text-slate-200">LLM</div>
         <div className="mt-1 text-sm text-slate-500">
-          用于从通用链接抽取题面 Markdown（LeetCode 默认优先结构化抓取以保证数字/公式/样例不被改写）。
+          用于从非 LeetCode 链接抽取题面 Markdown（收集时优先调用 LLM；LeetCode 仍优先结构化抓取以减少数字/公式/样例误改）。
         </div>
 
         <div className="mt-4 grid gap-3">

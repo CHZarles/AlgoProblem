@@ -600,24 +600,29 @@ export default function ProblemDetailPage() {
               删除题目
             </Button>
             <Button
-              variant="primary"
+              variant={problem.status === "done" ? "secondary" : "primary"}
               onClick={() => {
-                setProblemStatus(problem.id, "done")
+                const next = problem.status === "done" ? "todo" : "done";
+                setProblemStatus(problem.id, next)
                   .then(() => {
-                    toast.success("已标记为已做");
+                    toast.success(next === "done" ? "已标记为已做" : "已撤销已做");
                     detail.reload();
                   })
                   .catch(() => toast.error("更新失败"));
               }}
             >
-              标记已做
+              {problem.status === "done" ? "撤销已做" : "标记已做"}
             </Button>
             <Button
               variant="ghost"
               onClick={() => {
                 markReviewCompleted(problem.id)
-                  .then(() => {
-                    toast.message("已记录一次复习完成");
+                  .then((out) => {
+                    if (out.ignored) {
+                      toast.message(out.reason === "duplicate_today" ? "今天已复习（已忽略）" : "未到期（已忽略）");
+                    } else {
+                      toast.message("已记录一次复习完成");
+                    }
                     detail.reload();
                   })
                   .catch(() => toast.error("更新失败"));
@@ -666,7 +671,7 @@ export default function ProblemDetailPage() {
               <div className="p-3">
                 <Tabs.Content value="statement">
                   <div className="rounded-2xl bg-black/10 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-                    <Markdown value={problem.markdown} />
+                    <Markdown value={problem.markdown} mode="statement" />
                   </div>
                 </Tabs.Content>
 

@@ -102,7 +102,10 @@ export async function setProblemStatus(problemId: string, status: Problem["statu
 }
 
 export async function markReviewCompleted(problemId: string) {
-  return apiFetch<{ ok: true }>(`/problems/${problemId}/review`, { method: "POST", body: JSON.stringify({ result: "good" }) });
+  return apiFetch<{ ok: true; ignored?: boolean; reason?: "not_due" | "duplicate_today"; nextReviewAt?: string; intervalDays?: number }>(
+    `/problems/${problemId}/review`,
+    { method: "POST", body: JSON.stringify({ result: "good" }) },
+  );
 }
 
 export async function deleteProblem(problemId: string) {
@@ -278,10 +281,13 @@ export async function getTodayReviewQueue(limit?: number): Promise<{ items: Revi
 }
 
 export async function reviewCheckIn(problemId: string, input: { result: "good" | "hard" | "again"; mistakeTags?: string[] }) {
-  return apiFetch<{ ok: true; nextReviewAt: string; intervalDays: number }>(`/review/${problemId}/checkin`, {
+  return apiFetch<{ ok: true; nextReviewAt: string; intervalDays: number; ignored?: boolean; reason?: "not_due" | "duplicate_today" }>(
+    `/review/${problemId}/checkin`,
+    {
     method: "POST",
     body: JSON.stringify(input),
-  });
+    },
+  );
 }
 
 export type Settings = {

@@ -57,9 +57,43 @@ function normalizeBoldLabels(markdown: string) {
     .join("\n");
 }
 
-export function Markdown({ value, className }: { value: string; className?: string }) {
+function normalizeStatementLayout(markdown: string) {
+  const md = markdown.replace(/\r\n/g, "\n");
+  const lines = md.split("\n");
+  let inFence = false;
+
+  return lines
+    .map((line) => {
+      if (/^\s*```/.test(line)) {
+        inFence = !inFence;
+        return line;
+      }
+      if (inFence) return line;
+
+      // LeetCode/题面里经常把 “输入/输出/解释” 拼在同一行；这里做轻量排版修复，尽量贴近原题布局。
+      let s = line;
+      s = s.replace(/([^\s])\s+(\*\*(?:输出|Output)\*\*[:：])/gu, "$1\n\n$2");
+      s = s.replace(/([^\s])\s+(\*\*(?:解释|Explanation)\*\*[:：])/gu, "$1\n\n$2");
+      s = s.replace(/([^\s])\s+(\*\*(?:提示|Constraints)\*\*[:：])/gu, "$1\n\n$2");
+      s = s.replace(/((?:输入|Input)[:：][^\n]{0,600})\s+((?:输出|Output)[:：])/gu, "$1\n\n$2");
+      s = s.replace(/((?:输出|Output)[:：][^\n]{0,600})\s+((?:解释|Explanation)[:：])/gu, "$1\n\n$2");
+      return s;
+    })
+    .join("\n");
+}
+
+export function Markdown({
+  value,
+  className,
+  mode = "default",
+}: {
+  value: string;
+  className?: string;
+  mode?: "default" | "statement";
+}) {
   const theme = useTheme();
-  const normalized = normalizeBoldLabels(stripOuterMarkdownFence(stripFrontmatter(value)));
+  const base = normalizeBoldLabels(stripOuterMarkdownFence(stripFrontmatter(value)));
+  const normalized = mode === "statement" ? normalizeStatementLayout(base) : base;
   return (
     <div
       className={cn(

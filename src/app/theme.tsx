@@ -1,39 +1,35 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-export type ThemePreference = "system" | "dark" | "light" | "cream";
+export type ThemePreference = "dark" | "light" | "autumn";
 export type ResolvedTheme = "dark" | "light";
 
 const STORAGE_KEY = "algoproblem.theme";
 
 function isThemePreference(v: unknown): v is ThemePreference {
-  return v === "system" || v === "dark" || v === "light" || v === "cream";
+  return v === "dark" || v === "light" || v === "autumn";
 }
 
 function readStoredPreference(): ThemePreference {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return isThemePreference(raw) ? raw : "system";
-  } catch {
-    return "system";
-  }
-}
-
-function resolvePreference(preference: ThemePreference): ResolvedTheme {
-  if (preference === "dark") return "dark";
-  if (preference === "light" || preference === "cream") return "light";
-  try {
-    return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
+    // Backward-compatible: previously allowed "system"/"cream". Fold them into a stable default.
+    if (raw === "system" || raw === "cream") return "dark";
+    return isThemePreference(raw) ? raw : "dark";
   } catch {
     return "dark";
   }
 }
 
+function resolvePreference(preference: ThemePreference): ResolvedTheme {
+  return preference === "dark" ? "dark" : "light";
+}
+
 function applyThemeState(preference: ThemePreference, resolved: ResolvedTheme) {
   const root = document.documentElement;
   root.classList.toggle("theme-dark", resolved === "dark");
-  root.classList.toggle("theme-light", resolved === "light" && preference !== "cream");
-  root.classList.toggle("theme-cream", preference === "cream");
+  root.classList.toggle("theme-light", resolved === "light" && preference !== "autumn");
+  root.classList.toggle("theme-autumn", preference === "autumn");
   root.dataset.theme = preference;
   root.dataset.resolvedTheme = resolved;
 }
@@ -61,30 +57,7 @@ export function useTheme() {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setPreference] = useState<ThemePreference>(() => readStoredPreference());
-  const [system, setSystem] = useState<ResolvedTheme>(() => resolvePreference("system"));
-
-  useEffect(() => {
-    let mounted = true;
-    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
-    if (!mq) return;
-
-    const onChange = () => {
-      if (!mounted) return;
-      setSystem(mq.matches ? "dark" : "light");
-    };
-
-    onChange();
-    mq.addEventListener("change", onChange);
-    return () => {
-      mounted = false;
-      mq.removeEventListener("change", onChange);
-    };
-  }, []);
-
-  const resolved = useMemo(
-    () => (preference === "system" ? system : preference === "dark" ? "dark" : "light"),
-    [preference, system],
-  );
+  const resolved = useMemo(() => resolvePreference(preference), [preference]);
 
   useEffect(() => {
     try {

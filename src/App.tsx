@@ -18,8 +18,8 @@ function AppShell() {
   const toasterTheme = theme.resolved === "light" ? "light" : "dark";
   const toasterClassName =
     theme.resolved === "light"
-      ? theme.preference === "cream"
-        ? "bg-[#FBF8F1] text-slate-800 shadow-[0_0_0_1px_rgba(71,56,39,0.14)] shadow-panel"
+      ? theme.preference === "autumn"
+        ? "bg-[#FFFAF4] text-slate-800 shadow-[0_0_0_1px_rgba(61,39,23,0.16)] shadow-panel"
         : "bg-white text-slate-800 shadow-[0_0_0_1px_rgba(15,23,42,0.12)] shadow-panel"
       : "bg-[#0F1520] text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel";
   return (

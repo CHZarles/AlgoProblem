@@ -129,7 +129,7 @@ export function reviewCheckin(opts: {
 }) {
   const { workspaceId, problemId } = opts;
   const result = opts.result;
-  const mistakeTags = uniq(opts.mistakeTags ?? []);
+  const mistakeTags = opts.mistakeTags === undefined ? undefined : uniq(opts.mistakeTags);
 
   const d = db();
   const now = nowIso();
@@ -139,16 +139,84 @@ export function reviewCheckin(opts: {
       `SELECT
         id,
         difficulty,
+        review_next_at,
         review_interval_days,
         review_ease,
-        review_count
+        review_count,
+        review_last_at,
+        review_mistake_tags_json
       FROM problems
       WHERE id = ? AND workspace_id = ?`,
     )
     .get(problemId, workspaceId) as
-    | { id: string; difficulty: string; review_interval_days: number | null; review_ease: number | null; review_count: number | null }
+    | {
+        id: string;
+        difficulty: string;
+        review_next_at: string | null;
+        review_interval_days: number | null;
+        review_ease: number | null;
+        review_count: number | null;
+        review_last_at: string | null;
+        review_mistake_tags_json: string | null;
+      }
     | undefined;
   if (!row) return { ok: false as const, error: "not_found" as const };
+
+  const prevMistakes = uniq(parseJsonArray(row.review_mistake_tags_json));
+  const mergedMistakes = mistakeTags === undefined ? prevMistakes : mistakeTags;
+
+  const prevNextAt = row.review_next_at ?? null;
+  const prevLastAt = row.review_last_at ?? null;
+
+  // Prevent accidental “spam click” from pushing intervals far into the future:
+  // - If not due yet, ignore.
+  // - If already checked-in today, ignore.
+  const notDueYet = prevNextAt ? new Date(prevNextAt).getTime() > new Date(now).getTime() : false;
+  if (notDueYet) {
+    if (mistakeTags !== undefined && JSON.stringify(prevMistakes) !== JSON.stringify(mergedMistakes)) {
+      d.prepare(
+        `UPDATE problems
+         SET review_mistake_tags_json = ?,
+             updated_at = ?,
+             last_activity_at = ?
+         WHERE id = ? AND workspace_id = ?`,
+      ).run(JSON.stringify(mergedMistakes), now, now, problemId, workspaceId);
+    }
+    return {
+      ok: true as const,
+      ignored: true as const,
+      reason: "not_due" as const,
+      nextReviewAt: prevNextAt ?? isoDay(addDays(new Date(), 1)),
+      intervalDays: Math.max(1, Number(row.review_interval_days ?? 1)),
+      ease: Number(row.review_ease ?? 2.5),
+      reviewCount: Number(row.review_count ?? 0),
+      mistakeTags: mergedMistakes,
+    };
+  }
+
+  const today = startOfDay(new Date(now)).getTime();
+  const lastDay = prevLastAt ? startOfDay(new Date(prevLastAt)).getTime() : null;
+  if (lastDay !== null && lastDay === today) {
+    if (mistakeTags !== undefined && JSON.stringify(prevMistakes) !== JSON.stringify(mergedMistakes)) {
+      d.prepare(
+        `UPDATE problems
+         SET review_mistake_tags_json = ?,
+             updated_at = ?,
+             last_activity_at = ?
+         WHERE id = ? AND workspace_id = ?`,
+      ).run(JSON.stringify(mergedMistakes), now, now, problemId, workspaceId);
+    }
+    return {
+      ok: true as const,
+      ignored: true as const,
+      reason: "duplicate_today" as const,
+      nextReviewAt: prevNextAt ?? isoDay(addDays(new Date(), 1)),
+      intervalDays: Math.max(1, Number(row.review_interval_days ?? 1)),
+      ease: Number(row.review_ease ?? 2.5),
+      reviewCount: Number(row.review_count ?? 0),
+      mistakeTags: mergedMistakes,
+    };
+  }
 
   const prevCount = Number(row.review_count ?? 0);
   const prevInterval = Math.max(1, Number(row.review_interval_days ?? 1));
@@ -175,7 +243,7 @@ export function reviewCheckin(opts: {
     }
   }
 
-  if (mistakeTags.length) {
+  if ((mergedMistakes?.length ?? 0) > 0) {
     // Having mistake tags means "not clean"; schedule slightly sooner.
     ease = Math.max(1.3, ease - 0.1);
     nextIntervalDays = Math.max(1, Math.round(nextIntervalDays * 0.7));
@@ -202,7 +270,7 @@ export function reviewCheckin(opts: {
       nextIntervalDays,
       ease,
       prevCount + 1,
-      JSON.stringify(mistakeTags),
+      JSON.stringify(mergedMistakes ?? []),
       now,
       now,
       problemId,
@@ -229,4 +297,3 @@ export function reviewCheckin(opts: {
     mistakeTags,
   };
 }
-

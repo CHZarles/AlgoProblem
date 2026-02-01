@@ -43,8 +43,12 @@ export default function ReviewPage() {
 
   const checkin = async (item: ReviewQueueItem, result: "good" | "hard" | "again") => {
     try {
-      await reviewCheckIn(item.id, { result, mistakeTags: mistakes[item.id] ?? [] });
-      toast.success("已打卡");
+      const out = await reviewCheckIn(item.id, { result, mistakeTags: mistakes[item.id] ?? [] });
+      if (out.ignored) {
+        toast.message(out.reason === "duplicate_today" ? "今天已打卡（已忽略）" : "未到期（已忽略）");
+      } else {
+        toast.success("已打卡");
+      }
       qQueue.reload();
     } catch {
       toast.error("打卡失败");

@@ -904,11 +904,14 @@ ${rawMarkdown}
     if (!out.ok) return res.status(404).json({ error: "not_found" });
 
     // Keep legacy behavior: a review check-in moves the problem into "reviewing".
-    d.prepare("UPDATE problems SET status = ? WHERE id = ? AND workspace_id = ? AND status != 'abandoned'").run(
-      "reviewing",
-      req.params.id,
-      workspaceId,
-    );
+    // If ignored (not due / duplicate), don't change status.
+    if (!("ignored" in out && out.ignored)) {
+      d.prepare("UPDATE problems SET status = ? WHERE id = ? AND workspace_id = ? AND status != 'abandoned'").run(
+        "reviewing",
+        req.params.id,
+        workspaceId,
+      );
+    }
 
     return res.json({ ok: true, ...out });
   });
