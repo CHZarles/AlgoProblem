@@ -102,7 +102,7 @@ export function Sidebar({
               "hover:brightness-[1.08] active:brightness-[0.98]",
             )}
           >
-            <span className="select-none font-mono text-[12px] font-semibold tracking-tight text-emerald-200">{`</>`}</span>
+            <span className="select-none font-mono text-[12px] font-semibold tracking-tight text-slate-100">{`</>`}</span>
           </NavLink>
           {!collapsed ? (
             <div>

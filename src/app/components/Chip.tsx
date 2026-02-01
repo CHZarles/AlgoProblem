@@ -18,7 +18,7 @@ export function Chip({
         "inline-flex h-8 items-center gap-2 rounded-full px-3 text-xs transition",
         "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
         active
-          ? "bg-sky-500/18 text-sky-200 shadow-[0_0_0_1px_rgba(14,165,233,0.30)]"
+          ? "bg-sky-500/14 text-sky-200 shadow-[0_0_0_1px_rgba(56,189,248,0.28)]"
           : "bg-white/4 text-slate-200 hover:bg-white/7",
       )}
     >
