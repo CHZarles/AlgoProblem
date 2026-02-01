@@ -3,6 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import type { Collection, Difficulty, OJPlatform, ProblemStatus } from "../../types/model";
 import { Button } from "../components/Button";
 import { Chip } from "../components/Chip";
+import { Input } from "../components/Input";
 import { cn } from "../../lib/cn";
 
 export type ProblemsAdvancedFiltersValue = {
@@ -12,10 +13,29 @@ export type ProblemsAdvancedFiltersValue = {
   hasSolution: "all" | boolean;
   hasNotes: "all" | boolean;
   collectionId: "all" | string;
+  tags: string[];
 };
 
 function keyOf(v: ProblemsAdvancedFiltersValue) {
-  return [v.platform, v.difficulty, v.status, String(v.hasSolution), String(v.hasNotes), v.collectionId].join("|");
+  return [
+    v.platform,
+    v.difficulty,
+    v.status,
+    String(v.hasSolution),
+    String(v.hasNotes),
+    v.collectionId,
+    v.tags.join(","),
+  ].join("|");
+}
+
+function uniqTags(raw: string[]) {
+  return Array.from(
+    new Set(
+      raw
+        .map((s) => s.trim().replace(/^#/, "").toLowerCase())
+        .filter(Boolean),
+    ),
+  );
 }
 
 export function ProblemsAdvancedFiltersDialog({
@@ -32,6 +52,7 @@ export function ProblemsAdvancedFiltersDialog({
   onApply: (next: ProblemsAdvancedFiltersValue) => void;
 }) {
   const [draft, setDraft] = useState<ProblemsAdvancedFiltersValue>(value);
+  const [tagText, setTagText] = useState("");
 
   const valueKey = useMemo(() => keyOf(value), [value]);
   const draftKey = useMemo(() => keyOf(draft), [draft]);
@@ -45,7 +66,9 @@ export function ProblemsAdvancedFiltersDialog({
       hasSolution: "all",
       hasNotes: "all",
       collectionId: "all",
+      tags: [],
     });
+    setTagText("");
   };
 
   const apply = () => {
@@ -53,11 +76,24 @@ export function ProblemsAdvancedFiltersDialog({
     onOpenChange(false);
   };
 
+  const addTags = (raw: string) => {
+    const parts = raw
+      .split(/[,，\s]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!parts.length) return;
+    setDraft((d) => ({ ...d, tags: uniqTags([...d.tags, ...parts]) }));
+    setTagText("");
+  };
+
   return (
     <Dialog.Root
       open={open}
       onOpenChange={(nextOpen) => {
-        if (nextOpen) setDraft(value);
+        if (nextOpen) {
+          setDraft(value);
+          setTagText("");
+        }
         onOpenChange(nextOpen);
       }}
     >
@@ -242,6 +278,40 @@ export function ProblemsAdvancedFiltersDialog({
                   ))}
                 </select>
                 {!collections.length ? <div className="mt-1 text-xs text-slate-500">暂无集合</div> : null}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs font-medium text-slate-300">标签</div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="w-[280px] max-w-full">
+                  <Input
+                    value={tagText}
+                    onChange={(e) => setTagText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addTags(tagText);
+                      }
+                    }}
+                    placeholder="输入标签（回车添加，支持空格/逗号）"
+                    className="h-9"
+                  />
+                </div>
+                <Button variant="secondary" onClick={() => addTags(tagText)} disabled={!tagText.trim()}>
+                  添加
+                </Button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {draft.tags.length ? (
+                  draft.tags.map((t) => (
+                    <Chip key={t} active onClick={() => setDraft((d) => ({ ...d, tags: d.tags.filter((x) => x !== t) }))}>
+                      #{t}
+                    </Chip>
+                  ))
+                ) : (
+                  <div className="text-sm text-slate-500">未设置标签筛选</div>
+                )}
               </div>
             </div>
           </div>

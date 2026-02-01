@@ -78,7 +78,6 @@ export default function ProblemsPage() {
   const navigate = useNavigate();
   const density = useDensity();
   const [query, setQuery] = useState("");
-  const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [platform, setPlatform] = useState<"all" | OJPlatform>("all");
   const [difficulty, setDifficulty] = useState<"all" | Difficulty>("all");
@@ -160,24 +159,14 @@ export default function ProblemsPage() {
     }
   };
 
-  const addTags = (raw: string) => {
-    const parts = raw
-      .split(/[,，]/)
-      .map((s) => s.trim().replace(/^#/, ""))
-      .filter(Boolean)
-      .map((s) => s.toLowerCase());
-    if (!parts.length) return;
-    setTags((prev) => Array.from(new Set([...prev, ...parts])));
-    setTagInput("");
-  };
-
   const advancedActive =
     platform === "generic" ||
     difficulty === "unknown" ||
     (status !== "all" && status !== "todo" && status !== "done") ||
     hasSolution === false ||
     hasNotes !== "all" ||
-    collectionId !== "all";
+    collectionId !== "all" ||
+    tags.length > 0;
 
   return (
     <div className="space-y-4">
@@ -215,20 +204,6 @@ export default function ProblemsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="w-[260px] max-w-full">
-            <Input
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addTags(tagInput);
-                }
-              }}
-              placeholder="标签过滤（回车添加，逗号分隔）"
-              className="h-8 rounded-full text-xs"
-            />
-          </div>
           {tags.map((t) => (
             <Chip key={t} active onClick={() => setTags((prev) => prev.filter((x) => x !== t))}>
               #{t} <X className="h-4 w-4" />
@@ -514,7 +489,7 @@ export default function ProblemsPage() {
         open={advancedOpen}
         onOpenChange={setAdvancedOpen}
         collections={collections}
-        value={{ platform, difficulty, status, hasSolution, hasNotes, collectionId }}
+        value={{ platform, difficulty, status, hasSolution, hasNotes, collectionId, tags }}
         onApply={(next) => {
           setPlatform(next.platform);
           setDifficulty(next.difficulty);
@@ -522,6 +497,7 @@ export default function ProblemsPage() {
           setHasSolution(next.hasSolution);
           setHasNotes(next.hasNotes);
           setCollectionId(next.collectionId);
+          setTags(next.tags);
         }}
       />
     </div>
