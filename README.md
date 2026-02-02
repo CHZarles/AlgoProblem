@@ -4,10 +4,24 @@
 
 ## Live Demo
 
-体验链接（GitHub Pages）：`https://CHZarles.github.io/AlgoProblem/`
+体验链接（GitHub Pages）：https://CHZarles.github.io/AlgoProblem/
 
+![AlgoWorkspace](docs/hero.svg)
 
 ## Overview
+
+AlgoWorkspace 是一个本地优先的刷题工作台：把「题面 / 笔记 / 题解 / 复习 / 统计」放进同一个 Workspace 里，强调高密度信息可读、全局可搜索、强反馈与可迁移的数据形态。
+
+## Screenshots
+
+<p>
+  <img src="docs/shots/problem-bank.svg" width="49%" alt="Problem Bank" />
+  <img src="docs/shots/problem-detail.svg" width="49%" alt="Problem Detail" />
+</p>
+<p>
+  <img src="docs/shots/review.svg" width="49%" alt="Review Queue" />
+  <img src="docs/shots/stats.svg" width="49%" alt="Stats & Heatmap" />
+</p>
 
 ## 适用人群
 

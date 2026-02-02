@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#0B0F14"/>
+  <rect x="64" y="64" width="1072" height="592" rx="20" fill="#0F1520" stroke="rgba(148,163,184,0.18)"/>
+  <text x="96" y="126" fill="#E2E8F0" font-family="Inter, ui-sans-serif, system-ui" font-size="22" font-weight="700">Today’s Review Queue</text>
+  <text x="96" y="154" fill="#94A3B8" font-family="Inter, ui-sans-serif, system-ui" font-size="14">Placeholder screenshot. Replace with a real UI capture.</text>
+  <rect x="96" y="190" width="1008" height="430" rx="16" fill="rgba(255,255,255,0.04)" stroke="rgba(148,163,184,0.14)"/>
+  <g fill="#94A3B8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="120" y="228">spaced repetition · mistake tags · check-in</text>
+  </g>
+</svg>
+
