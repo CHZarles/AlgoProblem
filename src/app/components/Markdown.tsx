@@ -7,9 +7,10 @@ import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
-import type { PropertyDefinition } from "hast-util-sanitize";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../theme";
+
+type SanitizedPropertyDefinition = string | [string, ...Array<string | RegExp>];
 
 function formatCodeLanguageLabel(raw: string) {
   const lang = raw.trim().toLowerCase();
@@ -29,8 +30,11 @@ const SANITIZE_SCHEMA = (() => {
     new Set([...(base.tagNames ?? []), "sup", "sub", "kbd", "details", "summary", "input", "mark"]),
   );
 
-  const attrs: Record<string, PropertyDefinition[]> = { ...(base.attributes ?? {}) };
-  const add = (tag: string, extra: PropertyDefinition[]) => {
+  const attrs: Record<string, SanitizedPropertyDefinition[]> = { ...(base.attributes ?? {}) } as Record<
+    string,
+    SanitizedPropertyDefinition[]
+  >;
+  const add = (tag: string, extra: SanitizedPropertyDefinition[]) => {
     attrs[tag] = Array.from(new Set([...(attrs[tag] ?? []), ...extra]));
   };
 
