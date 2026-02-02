@@ -311,3 +311,43 @@ body {
   background-color: rgb(255 250 244);
   color: rgb(32 25 20);
 }
+
+/* Difficulty segmented control: selected text should stay readable across themes */
+.difficulty-selected.difficulty-unknown {
+  color: rgb(248 250 252);
+}
+.difficulty-selected.difficulty-easy {
+  color: rgb(167 243 208);
+}
+.difficulty-selected.difficulty-medium {
+  color: rgb(253 230 138);
+}
+.difficulty-selected.difficulty-hard {
+  color: rgb(254 205 211);
+}
+
+.theme-light .difficulty-selected.difficulty-unknown {
+  color: rgb(15 23 42);
+}
+.theme-light .difficulty-selected.difficulty-easy {
+  color: rgb(4 120 87);
+}
+.theme-light .difficulty-selected.difficulty-medium {
+  color: rgb(180 83 9);
+}
+.theme-light .difficulty-selected.difficulty-hard {
+  color: rgb(190 18 60);
+}
+
+.theme-autumn .difficulty-selected.difficulty-unknown {
+  color: rgb(32 25 20);
+}
+.theme-autumn .difficulty-selected.difficulty-easy {
+  color: rgb(4 120 87);
+}
+.theme-autumn .difficulty-selected.difficulty-medium {
+  color: rgb(154 66 9);
+}
+.theme-autumn .difficulty-selected.difficulty-hard {
+  color: rgb(175 20 66);
+}
