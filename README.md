@@ -2,6 +2,8 @@
 
 本地优先的算法题 Workspace：跨平台收集题面（URL → Markdown）、做题笔记、题解沉淀、题集计划、复习队列、统计热力图。单体应用，无需登录。
 
+> 想在线展示：优先用 GitHub Pages 的「Static Demo（可点击）」模式（见下方）。
+
 ## 适用人群
 - 在校算法竞赛 / 校招刷题
 - 想把“题面 / 笔记 / 题解”分维度沉淀，并且可检索/可统计
@@ -17,6 +19,7 @@
 ## 关键交互
 - “标记已做”支持撤销
 - “复习完成/打卡”只在题目到期时推进间隔（未到期/当天重复会忽略）
+- Markdown 编辑体验：Tab 缩进/反缩进，Enter 自动续行列表/任务列表（并支持任务清单渲染）
 
 ## 题面收集规则（重要）
 - **入库必须有 Markdown 题面**（支持 LaTeX）
@@ -35,18 +38,13 @@ npm run dev
 - API：`http://localhost:8787`
 - 数据库：`.data/algoworkspace.sqlite`
 
-## Production（可选）
-```bash
-npm run build
-npm run start
-```
-
 ## Static Demo（GitHub Pages）
 
 本项目支持生成一个**可点击的静态 Demo**（无需后端），适合放到 GitHub Pages 展示。
 
 - Demo 模式使用浏览器侧 Mock API（`localStorage` 持久化，首次自动注入示例数据）
 - 路由使用 Hash（避免 GitHub Pages 刷新 404）
+- Demo 主要用于展示 UI/交互，和本地后端抓取/LLM 能力是两条链路
 
 ### 本地构建/预览
 
@@ -58,8 +56,14 @@ npm run preview:demo
 ### 部署到 GitHub Pages
 
 1. 推送到 `main` 或 `master`
-2. GitHub 仓库设置：**Pages → Build and deployment → Source: GitHub Actions**
-3. Workflow：`Deploy Demo to GitHub Pages` 会自动发布 `dist/`
+2. GitHub 仓库设置：**Settings → Pages → Build and deployment → Source: GitHub Actions**
+3. 等待 workflow：`Deploy Demo to GitHub Pages` 完成发布
+
+## Production（本地可选）
+```bash
+npm run build
+npm run start
+```
 
 ## LLM 配置（可选）
 设置页支持配置 `Base URL / Model / API Key`，用于从“非 LeetCode 链接”抽取题面 Markdown。
@@ -73,6 +77,7 @@ npm run preview:demo
 ## 数据与备份
 - 本项目为**单体本地 Workspace**：数据默认存储在 `.data/`（已在 `.gitignore` 排除）
 - 备份建议：直接复制 `.data/` 目录即可
+- Static Demo 的数据在浏览器侧（`localStorage`），可通过设置页导出/导入（JSON）
 
 ## 可选环境变量
 - `PORT`：API 端口（默认 `8787`）
