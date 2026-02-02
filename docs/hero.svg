@@ -1,52 +1,154 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="AlgoWorkspace hero image">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0B0F14"/>
-      <stop offset="1" stop-color="#111827"/>
+      <stop offset="0" stop-color="#070A10"/>
+      <stop offset="0.55" stop-color="#0B0F14"/>
+      <stop offset="1" stop-color="#0F172A"/>
     </linearGradient>
+    <radialGradient id="glow" cx="30%" cy="15%" r="70%">
+      <stop offset="0" stop-color="#38BDF8" stop-opacity="0.22"/>
+      <stop offset="0.45" stop-color="#A78BFA" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#38BDF8" stop-opacity="0.95"/>
-      <stop offset="1" stop-color="#A78BFA" stop-opacity="0.95"/>
+      <stop offset="0" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#A78BFA"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="14" stdDeviation="20" flood-color="#000000" flood-opacity="0.45"/>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0F1520"/>
+      <stop offset="1" stop-color="#0B111B"/>
+    </linearGradient>
+    <filter id="shadow-lg" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.55"/>
     </filter>
+    <filter id="shadow-sm" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <style>
+      .t-title{font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; font-weight:800; letter-spacing:-0.02em}
+      .t-sub{font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; font-weight:500}
+      .t-mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+    </style>
   </defs>
 
   <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect x="64" y="64" width="1072" height="502" rx="22" fill="#0F1520" stroke="rgba(148,163,184,0.18)" filter="url(#shadow)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
 
-  <rect x="96" y="96" width="8" height="56" rx="4" fill="url(#accent)"/>
-  <text x="120" y="132" fill="#E2E8F0" font-family="Inter, ui-sans-serif, system-ui" font-size="34" font-weight="700">AlgoWorkspace</text>
-  <text x="120" y="160" fill="#94A3B8" font-family="Inter, ui-sans-serif, system-ui" font-size="16">
-    Local-first algorithm workspace · URL→Markdown · Notes & Solutions · Review · Stats
-  </text>
+  <!-- Outer frame -->
+  <rect x="56" y="58" width="1088" height="514" rx="26" fill="url(#panel)" stroke="rgba(148,163,184,0.18)" filter="url(#shadow-lg)"/>
 
-  <g font-family="Inter, ui-sans-serif, system-ui" font-size="16" fill="#CBD5E1">
-    <text x="120" y="210">• Collect problems across OJ platforms (URL → Markdown)</text>
-    <text x="120" y="240">• Notes & solutions as separate dimensions, searchable and reusable</text>
-    <text x="120" y="270">• Spaced repetition “Today’s Review Queue” + GitHub-style heatmap</text>
-    <text x="120" y="300">• Single workspace, no login, data stays on your machine</text>
+  <!-- Header / Brand -->
+  <g transform="translate(92 96)">
+    <rect x="0" y="0" width="44" height="44" rx="12" fill="rgba(255,255,255,0.05)" stroke="rgba(148,163,184,0.16)"/>
+    <path d="M14 31 L22 13 L30 31" fill="none" stroke="url(#accent)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="22" cy="32.5" r="2.2" fill="#38BDF8"/>
+    <text x="60" y="30" class="t-title" font-size="34" fill="#E2E8F0">AlgoWorkspace</text>
+    <text x="60" y="55" class="t-sub" font-size="14" fill="#94A3B8">本地优先 · URL→Markdown · 笔记/题解分维度 · 间隔复习 · 统计热力图</text>
   </g>
 
-  <g>
-    <rect x="120" y="336" width="960" height="196" rx="18" fill="rgba(255,255,255,0.04)" stroke="rgba(148,163,184,0.16)"/>
-    <rect x="144" y="362" width="912" height="26" rx="10" fill="rgba(255,255,255,0.05)"/>
-    <circle cx="158" cy="375" r="5" fill="#34D399"/>
-    <circle cx="176" cy="375" r="5" fill="#FBBF24"/>
-    <circle cx="194" cy="375" r="5" fill="#F87171"/>
-    <text x="220" y="381" fill="#94A3B8" font-family="Inter, ui-sans-serif, system-ui" font-size="12">README screenshot placeholder</text>
+  <!-- Left copy -->
+  <g transform="translate(92 182)">
+    <rect x="0" y="0" width="520" height="210" rx="18" fill="rgba(255,255,255,0.035)" stroke="rgba(148,163,184,0.14)" filter="url(#shadow-sm)"/>
+    <rect x="18" y="18" width="6" height="56" rx="3" fill="url(#accent)"/>
+    <text x="34" y="44" class="t-title" font-size="18" fill="#E2E8F0">把刷题过程变成可沉淀的 Workspace</text>
+    <text x="34" y="72" class="t-sub" font-size="13" fill="#A8B3C7">收集题面、做笔记、写题解、安排复习、看统计——都在同一个地方。</text>
 
-    <rect x="144" y="404" width="560" height="108" rx="14" fill="rgba(2,6,23,0.45)" stroke="rgba(148,163,184,0.12)"/>
-    <rect x="720" y="404" width="336" height="108" rx="14" fill="rgba(2,6,23,0.28)" stroke="rgba(148,163,184,0.12)"/>
-    <text x="168" y="448" fill="#E2E8F0" font-family="Inter, ui-sans-serif, system-ui" font-size="14" font-weight="600">Problem Bank</text>
-    <text x="168" y="474" fill="#94A3B8" font-family="Inter, ui-sans-serif, system-ui" font-size="12">List · filters · tags · status</text>
-    <text x="744" y="448" fill="#E2E8F0" font-family="Inter, ui-sans-serif, system-ui" font-size="14" font-weight="600">Heatmap</text>
-    <text x="744" y="474" fill="#94A3B8" font-family="Inter, ui-sans-serif, system-ui" font-size="12">Review / Publish / All</text>
+    <g class="t-sub" font-size="13" fill="#CBD5E1">
+      <text x="34" y="112">• 多平台题库：链接入库 + 手动粘贴 Markdown</text>
+      <text x="34" y="136">• 笔记 ≠ 题解：可独立沉淀，也可关联题目</text>
+      <text x="34" y="160">• 今日复习队列：错因标签 + 到期才推进间隔</text>
+      <text x="34" y="184">• GitHub 风格热力图：复习/发布/综合口径切换</text>
+    </g>
   </g>
 
-  <text x="96" y="586" fill="#64748B" font-family="Inter, ui-sans-serif, system-ui" font-size="12">
-    Replace this placeholder with real screenshots: docs/hero.png, docs/shots/*.png
-  </text>
+  <!-- Right “app preview” mock -->
+  <g transform="translate(636 172)">
+    <rect x="0" y="0" width="460" height="380" rx="20" fill="rgba(255,255,255,0.035)" stroke="rgba(148,163,184,0.16)" filter="url(#shadow-sm)"/>
+
+    <!-- Topbar -->
+    <rect x="16" y="16" width="428" height="44" rx="14" fill="rgba(255,255,255,0.04)" stroke="rgba(148,163,184,0.12)"/>
+    <text x="34" y="44" class="t-mono" font-size="12" fill="#94A3B8">⌘K</text>
+    <rect x="78" y="29" width="244" height="18" rx="9" fill="rgba(2,6,23,0.42)" stroke="rgba(148,163,184,0.10)"/>
+    <text x="92" y="42" class="t-sub" font-size="11" fill="#94A3B8">全局搜索：题目 / 标签 / 笔记 / 题解</text>
+    <rect x="336" y="29" width="94" height="18" rx="9" fill="rgba(56,189,248,0.16)" stroke="rgba(56,189,248,0.32)"/>
+    <text x="353" y="42" class="t-sub" font-size="11" fill="#BAE6FD">收集题目</text>
+
+    <!-- Sidebar -->
+    <rect x="16" y="74" width="130" height="290" rx="16" fill="rgba(2,6,23,0.38)" stroke="rgba(148,163,184,0.10)"/>
+    <g class="t-sub" font-size="11" fill="#CBD5E1">
+      <text x="34" y="104">题库</text>
+      <text x="34" y="132" fill="#94A3B8">笔记</text>
+      <text x="34" y="160" fill="#94A3B8">题解</text>
+      <text x="34" y="188" fill="#94A3B8">题集</text>
+      <text x="34" y="216" fill="#94A3B8">复习</text>
+      <text x="34" y="244" fill="#94A3B8">统计</text>
+      <text x="34" y="272" fill="#94A3B8">设置</text>
+    </g>
+    <rect x="26" y="92" width="110" height="22" rx="11" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.26)"/>
+
+    <!-- Main list -->
+    <rect x="156" y="74" width="288" height="210" rx="16" fill="rgba(2,6,23,0.28)" stroke="rgba(148,163,184,0.10)"/>
+    <g>
+      <rect x="170" y="92" width="260" height="22" rx="11" fill="rgba(255,255,255,0.04)" stroke="rgba(148,163,184,0.10)"/>
+      <text x="182" y="107" class="t-sub" font-size="11" fill="#94A3B8">平台 · 难度 · 标签</text>
+    </g>
+    <g>
+      <rect x="170" y="128" width="260" height="44" rx="14" fill="rgba(255,255,255,0.035)" stroke="rgba(148,163,184,0.10)"/>
+      <text x="182" y="154" class="t-sub" font-size="12" fill="#E2E8F0">Trapping Rain Water</text>
+      <rect x="352" y="142" width="58" height="18" rx="9" fill="rgba(251,191,36,0.14)" stroke="rgba(251,191,36,0.30)"/>
+      <text x="366" y="155" class="t-sub" font-size="11" fill="#FDE68A">Hard</text>
+    </g>
+    <g>
+      <rect x="170" y="180" width="260" height="44" rx="14" fill="rgba(255,255,255,0.02)" stroke="rgba(148,163,184,0.08)"/>
+      <text x="182" y="206" class="t-sub" font-size="12" fill="#CBD5E1">Two Sum</text>
+      <rect x="352" y="194" width="58" height="18" rx="9" fill="rgba(52,211,153,0.12)" stroke="rgba(52,211,153,0.26)"/>
+      <text x="367" y="207" class="t-sub" font-size="11" fill="#BBF7D0">Easy</text>
+    </g>
+
+    <!-- Heatmap -->
+    <rect x="156" y="294" width="288" height="70" rx="16" fill="rgba(2,6,23,0.28)" stroke="rgba(148,163,184,0.10)"/>
+    <text x="170" y="318" class="t-sub" font-size="11" fill="#94A3B8">贡献热力图（复习 / 发布 / 综合）</text>
+    <g transform="translate(170 330)">
+      <!-- 7x10 grid -->
+      <g>
+        <rect x="0" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.12)"/>
+        <rect x="14" y="0" width="10" height="10" rx="2" fill="rgba(56,189,248,0.14)"/>
+        <rect x="28" y="0" width="10" height="10" rx="2" fill="rgba(56,189,248,0.22)"/>
+        <rect x="42" y="0" width="10" height="10" rx="2" fill="rgba(52,211,153,0.18)"/>
+        <rect x="56" y="0" width="10" height="10" rx="2" fill="rgba(52,211,153,0.26)"/>
+        <rect x="70" y="0" width="10" height="10" rx="2" fill="rgba(168,85,247,0.18)"/>
+        <rect x="84" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.10)"/>
+        <rect x="98" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.12)"/>
+        <rect x="112" y="0" width="10" height="10" rx="2" fill="rgba(56,189,248,0.16)"/>
+        <rect x="126" y="0" width="10" height="10" rx="2" fill="rgba(52,211,153,0.18)"/>
+      </g>
+      <g transform="translate(0 14)">
+        <rect x="0" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.10)"/>
+        <rect x="14" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.12)"/>
+        <rect x="28" y="0" width="10" height="10" rx="2" fill="rgba(56,189,248,0.16)"/>
+        <rect x="42" y="0" width="10" height="10" rx="2" fill="rgba(56,189,248,0.22)"/>
+        <rect x="56" y="0" width="10" height="10" rx="2" fill="rgba(52,211,153,0.22)"/>
+        <rect x="70" y="0" width="10" height="10" rx="2" fill="rgba(52,211,153,0.14)"/>
+        <rect x="84" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.10)"/>
+        <rect x="98" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.12)"/>
+        <rect x="112" y="0" width="10" height="10" rx="2" fill="rgba(168,85,247,0.16)"/>
+        <rect x="126" y="0" width="10" height="10" rx="2" fill="rgba(52,211,153,0.20)"/>
+      </g>
+      <g transform="translate(0 28)">
+        <rect x="0" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.10)"/>
+        <rect x="14" y="0" width="10" height="10" rx="2" fill="rgba(56,189,248,0.14)"/>
+        <rect x="28" y="0" width="10" height="10" rx="2" fill="rgba(56,189,248,0.18)"/>
+        <rect x="42" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.12)"/>
+        <rect x="56" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.10)"/>
+        <rect x="70" y="0" width="10" height="10" rx="2" fill="rgba(168,85,247,0.16)"/>
+        <rect x="84" y="0" width="10" height="10" rx="2" fill="rgba(52,211,153,0.18)"/>
+        <rect x="98" y="0" width="10" height="10" rx="2" fill="rgba(52,211,153,0.26)"/>
+        <rect x="112" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.10)"/>
+        <rect x="126" y="0" width="10" height="10" rx="2" fill="rgba(148,163,184,0.12)"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Footer hint -->
+  <text x="92" y="592" class="t-sub" font-size="12" fill="#64748B">README assets: docs/hero.svg · Replace with real screenshots anytime.</text>
 </svg>
-
