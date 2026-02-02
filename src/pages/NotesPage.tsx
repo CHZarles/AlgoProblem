@@ -250,13 +250,15 @@ export default function NotesPage() {
   const [focus, setFocus] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const ignoreParamNoteIdRef = useRef<string | null>(null);
+  const [deletedNoteIds, setDeletedNoteIds] = useState<string[]>([]);
   const q = useDebouncedValue(query.trim(), 180);
   const qNotes = useApiQuery(() => listNotes({ q, kind: "knowledge" }), [q]);
-  const libraryNotes = qNotes.data ?? EMPTY_NOTES;
+  const deletedSet = useMemo(() => new Set(deletedNoteIds), [deletedNoteIds]);
+  const libraryNotes = useMemo(() => (qNotes.data ?? EMPTY_NOTES).filter((n) => !deletedSet.has(n.id)), [deletedSet, qNotes.data]);
   const [noteId, setNoteId] = useState<string | null>(null);
   const qActive = useApiQuery(() => (noteId ? getNote(noteId) : Promise.resolve(null)), [noteId], { cache: true, staleTimeMs: 5 * 60 * 1000 });
   const activePayload = qActive.data;
-  const active = activePayload?.note ?? null;
+  const active = activePayload?.note && !deletedSet.has(activePayload.note.id) ? activePayload.note : null;
   const linkedProblems = activePayload?.problems ?? [];
   const [noteDirty, setNoteDirty] = useState(false);
   const isNotFound = qActive.error?.status === 404;
@@ -272,6 +274,14 @@ export default function NotesPage() {
     if (!target) return;
     if (ignoreParamNoteIdRef.current === target) {
       ignoreParamNoteIdRef.current = null;
+      setSearchParams((sp) => {
+        const next = new URLSearchParams(sp);
+        next.delete("note");
+        return next;
+      });
+      return;
+    }
+    if (deletedSet.has(target)) {
       setSearchParams((sp) => {
         const next = new URLSearchParams(sp);
         next.delete("note");
@@ -309,6 +319,14 @@ export default function NotesPage() {
         });
         return;
       }
+      if (deletedSet.has(target)) {
+        setSearchParams((sp) => {
+          const next = new URLSearchParams(sp);
+          next.delete("note");
+          return next;
+        });
+        return;
+      }
       setNoteId(target);
       return;
     }
@@ -329,7 +347,7 @@ export default function NotesPage() {
     if (noteDirty) return;
 
     // The URL can point to a deleted note (or a note deleted in another tab).
-    // Auto-heal by switching to the next available note (or clearing selection).
+                // Auto-heal by switching to the next available note (or clearing selection).
     const nextId = libraryNotes.find((n) => n.id !== noteId)?.id ?? null;
     ignoreParamNoteIdRef.current = noteId;
     setNoteId(nextId);
@@ -459,6 +477,7 @@ export default function NotesPage() {
               }}
               onDeleted={(deletedId) => {
                 setNoteDirty(false);
+                setDeletedNoteIds((prev) => (prev.includes(deletedId) ? prev : [...prev, deletedId]));
                 qNotes.reload();
 
                 ignoreParamNoteIdRef.current = deletedId;
