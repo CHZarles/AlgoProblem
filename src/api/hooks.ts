@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "./http";
 
 export function useApiQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
@@ -6,22 +6,40 @@ export function useApiQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
+  const prevKeyRef = useRef<string | null>(null);
+  const hasDataRef = useRef(false);
 
   const key = useMemo(() => JSON.stringify(deps), deps); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
+    const keyChanged = prevKeyRef.current !== key;
+    prevKeyRef.current = key;
+
+    if (keyChanged) {
+      hasDataRef.current = false;
+      setData(null);
+      setLoading(true);
+    } else {
+      // Avoid UI "flash" on background reloads when we already have data.
+      setLoading(!hasDataRef.current);
+    }
+
     setError(null);
     fetcher()
       .then((v) => {
         if (!alive) return;
+        hasDataRef.current = true;
         setData(v);
       })
       .catch((e) => {
         if (!alive) return;
         setError(e as ApiError);
-        setData(null);
+        // Keep previous data on non-key reloads to prevent flicker.
+        if (keyChanged) {
+          setData(null);
+          hasDataRef.current = false;
+        }
       })
       .finally(() => {
         if (!alive) return;
@@ -49,4 +67,3 @@ export function useDebouncedCallback<T extends (...args: never[]) => void>(fn: T
     setT(id);
   };
 }
-

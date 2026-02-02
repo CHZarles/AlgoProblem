@@ -1,4 +1,5 @@
-import { ExternalLink, FolderPlus, PanelLeftClose, PanelLeftOpen, Plus, RefreshCcw, Sparkles } from "lucide-react";
+import { Check, ChevronsUpDown, ExternalLink, FolderPlus, PanelLeftClose, PanelLeftOpen, Plus, RefreshCcw, Sparkles } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Tabs from "@radix-ui/react-tabs";
 import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -328,6 +329,14 @@ function SolutionEditor({
   const [publishing, setPublishing] = useState(false);
 
   const debounced = useDebouncedCallback(onPatch, 450);
+  const languageOptions = [
+    { v: "cpp", label: "C++" },
+    { v: "java", label: "Java" },
+    { v: "python", label: "Python" },
+    { v: "go", label: "Go" },
+    { v: "ts", label: "TypeScript" },
+  ] as const;
+  const currentLangLabel = languageOptions.find((x) => x.v === language)?.label ?? language;
 
   return (
     <div className="space-y-3">
@@ -344,21 +353,50 @@ function SolutionEditor({
           />
         </div>
         <div className="col-span-3">
-          <select
-            value={language}
-            onChange={(e) => {
-              const v = e.target.value;
-              setLanguage(v);
-              debounced({ language: v });
-            }}
-            className="h-9 w-full rounded-lg bg-[#0F1520] px-3 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
-          >
-            <option value="cpp">C++</option>
-            <option value="java">Java</option>
-            <option value="python">Python</option>
-            <option value="go">Go</option>
-            <option value="ts">TypeScript</option>
-          </select>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex h-9 w-full items-center justify-between gap-2 rounded-lg px-3 text-sm",
+                  "bg-white/6 text-slate-200 hover:bg-white/9",
+                  "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40",
+                )}
+              >
+                <span className="truncate font-medium">{currentLangLabel}</span>
+                <ChevronsUpDown className="h-4 w-4 text-slate-400" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                sideOffset={8}
+                align="start"
+                className="w-48 rounded-xl bg-[#0F1520] p-1 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel"
+              >
+                {languageOptions.map((x) => {
+                  const selected = x.v === language;
+                  return (
+                    <DropdownMenu.Item
+                      key={x.v}
+                      onSelect={() => {
+                        setLanguage(x.v);
+                        debounced({ language: x.v });
+                      }}
+                      className={cn(
+                        "flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm outline-none",
+                        "text-slate-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-slate-50",
+                        selected && "bg-white/4",
+                      )}
+                    >
+                      <span className="font-medium">{x.label}</span>
+                      {selected ? <Check className="h-4 w-4 text-sky-500" /> : null}
+                    </DropdownMenu.Item>
+                  );
+                })}
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </div>
         <div className="col-span-3 flex items-center justify-end">
           <Badge tone={status === "done" ? "easy" : "neutral"}>{status === "done" ? "已发布" : "草稿"}</Badge>
