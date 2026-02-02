@@ -412,12 +412,13 @@ export function ProblemIngestDialog({
                       onChange={(e) => setManualMarkdown(e.target.value)}
                       onKeyDown={(e) => {
                         const el = e.currentTarget;
+                        const currentValue = el.value;
 
                         if (e.key === "Tab") {
                           e.preventDefault();
                           e.stopPropagation();
                           const out = applyTextareaTabIndent({
-                            value: manualMarkdown,
+                            value: currentValue,
                             selectionStart: el.selectionStart ?? 0,
                             selectionEnd: el.selectionEnd ?? 0,
                             indent: "  ",
@@ -433,7 +434,7 @@ export function ProblemIngestDialog({
 
                         if (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey && !isComposing(e)) {
                           const out = applyTextareaMarkdownEnter({
-                            value: manualMarkdown,
+                            value: currentValue,
                             selectionStart: el.selectionStart ?? 0,
                             selectionEnd: el.selectionEnd ?? 0,
                           });
