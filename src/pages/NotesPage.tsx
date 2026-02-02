@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -249,6 +249,7 @@ export default function NotesPage() {
   const [query, setQuery] = useState("");
   const [focus, setFocus] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const ignoreParamNoteIdRef = useRef<string | null>(null);
   const q = useDebouncedValue(query.trim(), 180);
   const qNotes = useApiQuery(() => listNotes({ q, kind: "knowledge" }), [q]);
   const libraryNotes = qNotes.data ?? EMPTY_NOTES;
@@ -268,6 +269,15 @@ export default function NotesPage() {
   useEffect(() => {
     const target = (searchParams.get("note") ?? "").trim();
     if (!target) return;
+    if (ignoreParamNoteIdRef.current === target) {
+      ignoreParamNoteIdRef.current = null;
+      setSearchParams((sp) => {
+        const next = new URLSearchParams(sp);
+        next.delete("note");
+        return next;
+      });
+      return;
+    }
     if (noteId === target) return;
     if (noteDirty) {
       const ok = window.confirm("有未保存修改，确认丢弃？");
@@ -289,6 +299,15 @@ export default function NotesPage() {
     if (noteId) return;
     const target = (searchParams.get("note") ?? "").trim();
     if (target) {
+      if (ignoreParamNoteIdRef.current === target) {
+        ignoreParamNoteIdRef.current = null;
+        setSearchParams((sp) => {
+          const next = new URLSearchParams(sp);
+          next.delete("note");
+          return next;
+        });
+        return;
+      }
       setNoteId(target);
       return;
     }
@@ -421,6 +440,7 @@ export default function NotesPage() {
                 setNoteDirty(false);
                 qNotes.reload();
 
+                ignoreParamNoteIdRef.current = deletedId;
                 const nextId = list.find((n) => n.id !== deletedId)?.id ?? null;
                 setNoteId(nextId);
                 setSearchParams((sp) => {
