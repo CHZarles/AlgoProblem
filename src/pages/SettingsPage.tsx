@@ -8,7 +8,7 @@ import { exportWorkspace, getSettings, importWorkspace, patchSettings, testAcwin
 import { useApiQuery } from "../api/hooks";
 import { ApiError } from "../api/http";
 import { useTheme, type ThemePreference } from "../app/theme";
-import { Check, FileText, Leaf, Moon, Sun } from "lucide-react";
+import { Check, FileText, Leaf, Moon, Sun, Zap } from "lucide-react";
 
 export default function SettingsPage() {
   const theme = useTheme();
@@ -78,7 +78,7 @@ export default function SettingsPage() {
         )}
       >
         <div className="text-sm font-semibold text-slate-200">外观</div>
-        <div className="mt-1 text-sm text-slate-500">主题切换：浅色 / 纸张 / 秋天 / 深色（偏好存储在本地浏览器）。</div>
+        <div className="mt-1 text-sm text-slate-500">主题切换：浅色 / 纸张 / 秋天 / Neon / 深色（偏好存储在本地浏览器）。</div>
 
         <div className="mt-4 grid gap-3">
           <div>
@@ -110,6 +110,14 @@ export default function SettingsPage() {
                       Icon: Leaf,
                       iconClass: "text-[#B45309]",
                       iconWrap: "bg-[#F4D6B0]/45 shadow-[0_0_0_1px_rgba(180,83,9,0.26)]",
+                    },
+                    {
+                      value: "neon",
+                      label: "Neon",
+                      hint: "霓虹",
+                      Icon: Zap,
+                      iconClass: "text-cyan-200",
+                      iconWrap: "bg-cyan-500/12 shadow-[0_0_0_1px_rgba(34,211,238,0.22)]",
                     },
                     {
                       value: "dark",
@@ -152,7 +160,15 @@ export default function SettingsPage() {
             </div>
             <div className="mt-1 text-xs text-slate-500">
               当前生效：
-              {theme.preference === "autumn" ? "秋天" : theme.preference === "paper" ? "纸张" : theme.resolved === "light" ? "浅色" : "深色"}
+              {theme.preference === "autumn"
+                ? "秋天"
+                : theme.preference === "paper"
+                  ? "纸张"
+                  : theme.preference === "neon"
+                    ? "Neon"
+                    : theme.resolved === "light"
+                      ? "浅色"
+                      : "深色"}
             </div>
           </div>
         </div>

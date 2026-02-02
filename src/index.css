@@ -50,6 +50,19 @@
   --scrollbar-track-border: rgba(244, 241, 234, 1);
 }
 
+.theme-neon {
+  color-scheme: dark;
+  /* Neon: deep night + neon accents (geek / terminal-ish) */
+  --app-bg: #05060a;
+  --app-fg: rgb(232 235 255);
+
+  --md-divider: rgba(148, 163, 184, 0.16);
+
+  --scrollbar-thumb: rgba(99, 102, 241, 0.22);
+  --scrollbar-thumb-hover: rgba(99, 102, 241, 0.34);
+  --scrollbar-track-border: rgba(5, 6, 10, 1);
+}
+
 html,
 body {
   height: 100%;
@@ -153,6 +166,12 @@ body {
   color: rgba(20, 23, 31, 0.6);
 }
 
+.theme-neon .prose :where(pre)[data-language]::before {
+  border-color: rgba(56, 189, 248, 0.22);
+  background: rgba(56, 189, 248, 0.08);
+  color: rgba(125, 211, 252, 0.85);
+}
+
 .prose :where(pre code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
   display: block;
   padding: 0;
@@ -198,6 +217,11 @@ body {
   border-color: rgba(20, 23, 31, 0.12);
   color: rgb(20 23 31);
 }
+.theme-neon .prose :where(kbd):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: rgba(99, 102, 241, 0.14);
+  border-color: rgba(99, 102, 241, 0.24);
+  color: rgb(232 235 255);
+}
 
 .prose :where(details):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
   border-radius: 0.9rem;
@@ -219,6 +243,9 @@ body {
 }
 .theme-paper .prose details {
   background-color: rgba(20, 23, 31, 0.03);
+}
+.theme-neon .prose details {
+  background-color: rgba(99, 102, 241, 0.08);
 }
 
 .prose :where(input[type="checkbox"]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
@@ -346,6 +373,11 @@ body {
   border-color: rgba(20, 23, 31, 0.12);
   color: rgb(20 23 31);
 }
+.theme-neon .prose :where(code):not(:where(pre code, [class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: rgba(99, 102, 241, 0.14);
+  border-color: rgba(99, 102, 241, 0.26);
+  color: rgb(232 235 255);
+}
 
 .theme-dark .prose pre {
   background-color: rgba(2, 6, 23, 0.5);
@@ -389,6 +421,10 @@ body {
   background-color: rgba(20, 23, 31, 0.03);
   border-left-color: rgba(20, 23, 31, 0.14);
 }
+.theme-neon .prose blockquote {
+  background-color: rgba(56, 189, 248, 0.06);
+  border-left-color: rgba(56, 189, 248, 0.26);
+}
 
 .prose :where(table):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
   width: 100%;
@@ -415,6 +451,9 @@ body {
 .theme-paper .prose table {
   border: 1px solid rgba(20, 23, 31, 0.12);
 }
+.theme-neon .prose table {
+  border: 1px solid rgba(99, 102, 241, 0.22);
+}
 
 .theme-dark .prose thead th {
   background-color: rgba(148, 163, 184, 0.07);
@@ -428,6 +467,9 @@ body {
 
 .theme-paper .prose thead th {
   background-color: rgba(20, 23, 31, 0.04);
+}
+.theme-neon .prose thead th {
+  background-color: rgba(99, 102, 241, 0.12);
 }
 
 .theme-dark .prose tbody tr:nth-child(even) {
@@ -443,6 +485,9 @@ body {
 .theme-paper .prose tbody tr:nth-child(even) {
   background-color: rgba(20, 23, 31, 0.02);
 }
+.theme-neon .prose tbody tr:nth-child(even) {
+  background-color: rgba(99, 102, 241, 0.06);
+}
 
 .theme-dark .prose hr {
   border-color: rgba(148, 163, 184, 0.18);
@@ -456,6 +501,9 @@ body {
 
 .theme-paper .prose hr {
   border-color: rgba(20, 23, 31, 0.12);
+}
+.theme-neon .prose hr {
+  border-color: rgba(99, 102, 241, 0.22);
 }
 
 /* Theme: light (override common Tailwind utility colors used by the app) */
@@ -692,6 +740,19 @@ body {
   box-shadow: 0 1px 0 rgba(20, 23, 31, 0.06), 0 12px 40px rgba(20, 23, 31, 0.12);
 }
 
+.theme-neon .bg-\[\#0B0F14\] {
+  background-color: rgb(5 6 10);
+}
+.theme-neon .bg-\[\#0B0F14\]\/80 {
+  background-color: rgb(5 6 10 / 0.86);
+}
+.theme-neon .bg-\[\#0F1520\] {
+  background-color: rgb(11 16 34);
+}
+.theme-neon .shadow-panel {
+  box-shadow: 0 1px 0 rgba(99, 102, 241, 0.08), 0 12px 40px rgba(2, 6, 23, 0.5);
+}
+
 /* highlight.js: make code blocks match light-ish themes */
 .theme-dark .hljs {
   background: transparent !important;
@@ -713,6 +774,10 @@ body {
   background: transparent !important;
   color: inherit;
 }
+.theme-neon .hljs {
+  background: transparent !important;
+  color: inherit;
+}
 
 /* Code blocks: unify chrome + readable highlight for light/autumn */
 .theme-light .prose pre {
@@ -730,12 +795,85 @@ body {
   border: 1px solid rgba(20, 23, 31, 0.12);
   color: rgb(20 23 31);
 }
+.theme-neon .prose pre {
+  background-color: rgba(11, 16, 34, 0.75);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  color: rgb(232 235 255);
+}
 
 .theme-light pre code.hljs,
 .theme-autumn pre code.hljs,
 .theme-paper pre code.hljs {
   padding: 0 !important;
   background: transparent !important;
+}
+
+.theme-neon pre code.hljs {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* highlight.js token colors (neon: cyan/purple) */
+.theme-neon .hljs-doctag,
+.theme-neon .hljs-keyword,
+.theme-neon .hljs-meta .hljs-keyword,
+.theme-neon .hljs-template-tag,
+.theme-neon .hljs-template-variable,
+.theme-neon .hljs-type,
+.theme-neon .hljs-variable.language_ {
+  color: #a78bfa;
+}
+.theme-neon .hljs-title,
+.theme-neon .hljs-title.class_,
+.theme-neon .hljs-title.class_.inherited__,
+.theme-neon .hljs-title.function_ {
+  color: #22d3ee;
+}
+.theme-neon .hljs-attr,
+.theme-neon .hljs-attribute,
+.theme-neon .hljs-literal,
+.theme-neon .hljs-meta,
+.theme-neon .hljs-number,
+.theme-neon .hljs-operator,
+.theme-neon .hljs-variable,
+.theme-neon .hljs-selector-attr,
+.theme-neon .hljs-selector-class,
+.theme-neon .hljs-selector-id {
+  color: #60a5fa;
+}
+.theme-neon .hljs-regexp,
+.theme-neon .hljs-string,
+.theme-neon .hljs-meta .hljs-string {
+  color: #34d399;
+}
+.theme-neon .hljs-built_in,
+.theme-neon .hljs-symbol {
+  color: #fbbf24;
+}
+.theme-neon .hljs-comment,
+.theme-neon .hljs-code,
+.theme-neon .hljs-formula {
+  color: rgba(148, 163, 184, 0.72);
+}
+.theme-neon .hljs-name,
+.theme-neon .hljs-quote,
+.theme-neon .hljs-selector-tag,
+.theme-neon .hljs-selector-pseudo {
+  color: #34d399;
+}
+.theme-neon .hljs-section {
+  color: #60a5fa;
+}
+.theme-neon .hljs-bullet {
+  color: #fbbf24;
+}
+.theme-neon .hljs-addition {
+  color: #34d399;
+  background-color: rgba(52, 211, 153, 0.12);
+}
+.theme-neon .hljs-deletion {
+  color: #fb7185;
+  background-color: rgba(251, 113, 133, 0.12);
 }
 
 /* highlight.js token colors (GitHub light palette) */
@@ -1061,6 +1199,10 @@ body {
   background-color: rgb(255 255 255);
   color: rgb(20 23 31);
 }
+.theme-neon select option {
+  background-color: rgb(15 21 32);
+  color: rgb(232 235 255);
+}
 
 /* Difficulty segmented control: selected text should stay readable across themes */
 .difficulty-selected.difficulty-unknown {
@@ -1100,6 +1242,18 @@ body {
 }
 .theme-paper .difficulty-selected.difficulty-hard {
   color: rgb(190 18 60);
+}
+.theme-neon .difficulty-selected.difficulty-unknown {
+  color: rgb(232 235 255);
+}
+.theme-neon .difficulty-selected.difficulty-easy {
+  color: rgb(52 211 153);
+}
+.theme-neon .difficulty-selected.difficulty-medium {
+  color: rgb(251 191 36);
+}
+.theme-neon .difficulty-selected.difficulty-hard {
+  color: rgb(251 113 133);
 }
 
 .theme-autumn .difficulty-selected.difficulty-unknown {

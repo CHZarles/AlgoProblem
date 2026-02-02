@@ -1,13 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-export type ThemePreference = "dark" | "light" | "paper" | "autumn";
+export type ThemePreference = "dark" | "light" | "paper" | "autumn" | "neon";
 export type ResolvedTheme = "dark" | "light";
 
 const STORAGE_KEY = "algoproblem.theme";
 
 function isThemePreference(v: unknown): v is ThemePreference {
-  return v === "dark" || v === "light" || v === "paper" || v === "autumn";
+  return v === "dark" || v === "light" || v === "paper" || v === "autumn" || v === "neon";
 }
 
 function readStoredPreference(): ThemePreference {
@@ -22,7 +22,7 @@ function readStoredPreference(): ThemePreference {
 }
 
 function resolvePreference(preference: ThemePreference): ResolvedTheme {
-  return preference === "dark" ? "dark" : "light";
+  return preference === "dark" || preference === "neon" ? "dark" : "light";
 }
 
 function applyThemeState(preference: ThemePreference, resolved: ResolvedTheme) {
@@ -31,6 +31,7 @@ function applyThemeState(preference: ThemePreference, resolved: ResolvedTheme) {
   root.classList.toggle("theme-light", preference === "light");
   root.classList.toggle("theme-paper", preference === "paper");
   root.classList.toggle("theme-autumn", preference === "autumn");
+  root.classList.toggle("theme-neon", preference === "neon");
   root.dataset.theme = preference;
   root.dataset.resolvedTheme = resolved;
 }
