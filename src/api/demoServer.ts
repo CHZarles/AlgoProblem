@@ -33,6 +33,16 @@ function bytesOfUtf8(s: string) {
   return new TextEncoder().encode(s).byteLength;
 }
 
+function startOfDayMs(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x.getTime();
+}
+
+function uniqStrings(arr: string[]) {
+  return Array.from(new Set(arr.map((s) => s.trim()).filter(Boolean)));
+}
+
 function addActivity(type: Activity["type"], payload: Omit<Activity, "id" | "type" | "at">) {
   withDb((db) => {
     db.activities.unshift({
@@ -67,6 +77,7 @@ export async function demoApiFetch<T>({ path, init }: DemoRequest): Promise<T> {
   const pathname = url.pathname.replace(/^\/api/, "") || "/";
   const sp = url.searchParams;
   const body = json(init?.body ?? null);
+  const now = new Date();
 
   // search
   if (method === "GET" && pathname === "/search") {
@@ -258,6 +269,104 @@ export async function demoApiFetch<T>({ path, init }: DemoRequest): Promise<T> {
       }
     });
     return { ok: true } as unknown as T;
+  }
+
+  // review
+  if (method === "GET" && pathname === "/review/today") {
+    const limit = Number(sp.get("limit") ?? "80") || 80;
+    const today = startOfDayMs(now);
+    const items = withDb((db) => {
+      const out = db.problems
+        .map((p) => {
+          const interval = p.reviewIntervalDays ?? 1;
+          const count = p.reviewCount ?? 0;
+          const ease = p.reviewEase ?? 2.5;
+          const nextAt = p.reviewNextAt ?? (p.status === "reviewing" ? new Date(today).toISOString() : undefined);
+          if (!nextAt) return null;
+          const due = startOfDayMs(new Date(nextAt)) <= today;
+          if (!due) return null;
+          const diffW = p.difficulty === "hard" ? 3 : p.difficulty === "medium" ? 2 : p.difficulty === "easy" ? 1 : 0;
+          const mistakes = p.reviewMistakeTags ?? [];
+          const overdueDays = Math.max(0, Math.floor((today - startOfDayMs(new Date(nextAt))) / 86400000));
+          const priority = overdueDays * 10 + diffW * 3 + mistakes.length * 2;
+          return {
+            id: p.id,
+            title: p.title,
+            platform: p.platform,
+            externalId: p.externalId,
+            canonicalUrl: p.canonicalUrl,
+            difficulty: p.difficulty,
+            status: p.status,
+            tags: p.tags,
+            reviewNextAt: nextAt,
+            reviewIntervalDays: interval,
+            reviewCount: count,
+            reviewEase: ease,
+            reviewLastAt: p.reviewLastAt,
+            reviewMistakeTags: mistakes,
+            priority,
+          };
+        })
+        .filter(Boolean) as any[];
+      return out.sort((a, b) => b.priority - a.priority).slice(0, limit);
+    });
+    return { items } as unknown as T;
+  }
+
+  const mCheckin = matchPath(pathname, /^\/review\/([^/]+)\/checkin$/);
+  if (method === "POST" && mCheckin) {
+    const problemId = mCheckin[0];
+    const result = String((body as any)?.result ?? "good") as "good" | "hard" | "again";
+    const mistakeTags = Array.isArray((body as any)?.mistakeTags) ? ((body as any).mistakeTags as any[]).map((x) => String(x)) : [];
+    const today = startOfDayMs(now);
+
+    const out = withDb((db) => {
+      const p = db.problems.find((x) => x.id === problemId);
+      if (!p) throw new ApiError("not_found", 404);
+
+      const lastAt = p.reviewLastAt ? new Date(p.reviewLastAt) : null;
+      if (lastAt && startOfDayMs(lastAt) === today) {
+        return { ok: true, ignored: true as const, reason: "duplicate_today" as const };
+      }
+
+      const nextAt = p.reviewNextAt ? new Date(p.reviewNextAt) : null;
+      if (nextAt && startOfDayMs(nextAt) > today) {
+        return { ok: true, ignored: true as const, reason: "not_due" as const };
+      }
+
+      const prevInterval = p.reviewIntervalDays ?? 1;
+      const prevEase = p.reviewEase ?? 2.5;
+      const prevCount = p.reviewCount ?? 0;
+
+      let ease = prevEase;
+      let interval = prevInterval;
+      if (result === "again") {
+        ease = Math.max(1.3, ease - 0.3);
+        interval = 1;
+      } else if (result === "hard") {
+        ease = Math.max(1.3, ease - 0.1);
+        interval = Math.max(1, Math.round(prevInterval * 1.2));
+      } else {
+        ease = Math.min(3.2, ease + 0.1);
+        interval = Math.max(1, Math.round(prevInterval * ease));
+      }
+
+      const next = new Date(today + interval * 86400000).toISOString();
+      p.status = "reviewing";
+      p.reviewLastAt = now.toISOString();
+      p.reviewNextAt = next;
+      p.reviewIntervalDays = interval;
+      p.reviewCount = prevCount + 1;
+      p.reviewEase = ease;
+      p.reviewMistakeTags = uniqStrings(mistakeTags);
+      p.updatedAt = now.toISOString();
+      p.lastActivityAt = p.updatedAt;
+      addActivity("review_completed", { problemId: p.id });
+
+      return { ok: true, nextReviewAt: next, intervalDays: interval };
+    });
+
+    return out as unknown as T;
   }
 
   // notes list
@@ -673,4 +782,3 @@ export async function demoApiFetchBlob({ path }: DemoRequest): Promise<Blob> {
   const snapshot = withDb((db) => db);
   return new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
 }
-
