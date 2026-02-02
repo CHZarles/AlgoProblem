@@ -40,7 +40,7 @@ function NoteEditor({
   >;
   onDirtyChange: (dirty: boolean) => void;
   onReload: () => void;
-  onDeleted: () => void;
+  onDeleted: (deletedId: string) => void;
 }) {
   const [title, setTitle] = useState(note.title);
   const [tagsText, setTagsText] = useState(note.tags.join(", "));
@@ -88,7 +88,7 @@ function NoteEditor({
                 try {
                   await deleteNote(note.id);
                   toast.success("已删除笔记");
-                  onDeleted();
+                  onDeleted(note.id);
                 } catch {
                   toast.error("删除失败");
                 }
@@ -417,14 +417,16 @@ export default function NotesPage() {
                 qNotes.reload();
                 qActive.reload();
               }}
-              onDeleted={() => {
+              onDeleted={(deletedId) => {
                 setNoteDirty(false);
-                setNoteId(null);
                 qNotes.reload();
-                qActive.reload();
+
+                const nextId = list.find((n) => n.id !== deletedId)?.id ?? null;
+                setNoteId(nextId);
                 setSearchParams((sp) => {
                   const next = new URLSearchParams(sp);
-                  next.delete("note");
+                  if (nextId) next.set("note", nextId);
+                  else next.delete("note");
                   return next;
                 });
               }}
