@@ -500,7 +500,7 @@ export default function ProblemDetailPage() {
   const activities = payload?.activities ?? [];
   const collections = payload?.collections ?? [];
 
-  const qRelated = useApiQuery(() => (pid ? getProblemRelated(pid) : Promise.resolve(null)), [pid, problem?.updatedAt ?? ""]);
+  const qRelated = useApiQuery(() => (pid ? getProblemRelated(pid) : Promise.resolve(null)), [pid]);
   const related = qRelated.data;
 
   const [noteId, setNoteId] = useState<string | null>(null);
