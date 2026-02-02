@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "./http";
 
-export function useApiQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
+type CacheEntry<T> = { at: number; data: T };
+const queryCache = new Map<string, CacheEntry<unknown>>();
+
+export function useApiQuery<T>(
+  fetcher: () => Promise<T>,
+  deps: unknown[],
+  options?: {
+    cache?: boolean;
+    staleTimeMs?: number;
+  },
+) {
   const [reloadToken, setReloadToken] = useState(0);
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -17,11 +27,23 @@ export function useApiQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
     const keyChanged = prevKeyRef.current !== key;
     prevKeyRef.current = key;
 
+    const cacheEnabled = Boolean(options?.cache);
+    const staleTimeMs = options?.staleTimeMs ?? 0;
+    const cached = cacheEnabled ? (queryCache.get(key) as CacheEntry<T> | undefined) : undefined;
+    const cacheFresh = Boolean(cached && (!staleTimeMs || Date.now() - cached.at <= staleTimeMs));
+
     if (keyChanged) {
       hasDataRef.current = false;
-      setData(null);
-      setLoading(true);
-      setRefreshing(false);
+      if (cacheFresh && cached) {
+        hasDataRef.current = true;
+        setData(cached.data);
+        setLoading(false);
+        setRefreshing(false);
+      } else {
+        setData(null);
+        setLoading(true);
+        setRefreshing(false);
+      }
     } else {
       // Avoid UI "flash" on background reloads when we already have data.
       setLoading(!hasDataRef.current);
@@ -29,26 +51,34 @@ export function useApiQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
     }
 
     setError(null);
-    fetcher()
-      .then((v) => {
-        if (!alive) return;
-        hasDataRef.current = true;
-        setData(v);
-      })
-      .catch((e) => {
-        if (!alive) return;
-        setError(e as ApiError);
-        // Keep previous data on non-key reloads to prevent flicker.
-        if (keyChanged) {
-          setData(null);
-          hasDataRef.current = false;
-        }
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-        setRefreshing(false);
-      });
+    const shouldFetch = !keyChanged /* reload always refetch */ || !cacheFresh;
+    if (shouldFetch) {
+      fetcher()
+        .then((v) => {
+          if (!alive) return;
+          hasDataRef.current = true;
+          setData(v);
+          if (cacheEnabled) queryCache.set(key, { at: Date.now(), data: v });
+        })
+        .catch((e) => {
+          if (!alive) return;
+          setError(e as ApiError);
+          // Keep previous data on non-key reloads to prevent flicker.
+          if (keyChanged && !cacheFresh) {
+            setData(null);
+            hasDataRef.current = false;
+          }
+        })
+        .finally(() => {
+          if (!alive) return;
+          setLoading(false);
+          setRefreshing(false);
+        });
+    } else {
+      // Cached and fresh: no network request.
+      setLoading(false);
+      setRefreshing(false);
+    }
     return () => {
       alive = false;
     };

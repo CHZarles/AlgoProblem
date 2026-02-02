@@ -254,7 +254,7 @@ export default function NotesPage() {
   const qNotes = useApiQuery(() => listNotes({ q, kind: "knowledge" }), [q]);
   const libraryNotes = qNotes.data ?? EMPTY_NOTES;
   const [noteId, setNoteId] = useState<string | null>(null);
-  const qActive = useApiQuery(() => (noteId ? getNote(noteId) : Promise.resolve(null)), [noteId]);
+  const qActive = useApiQuery(() => (noteId ? getNote(noteId) : Promise.resolve(null)), [noteId], { cache: true, staleTimeMs: 5 * 60 * 1000 });
   const activePayload = qActive.data;
   const active = activePayload?.note ?? null;
   const linkedProblems = activePayload?.problems ?? [];
