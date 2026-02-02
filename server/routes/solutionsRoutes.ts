@@ -13,6 +13,8 @@ export function solutionsRoutes() {
     const workspaceId = (req as WorkspaceRequest).workspaceId;
     const q = (req.query.q as string | undefined)?.trim() ?? "";
     const language = (req.query.language as string | undefined) ?? "all";
+    const rawStatus = (req.query.status as string | undefined) ?? "all";
+    const status = rawStatus === "draft" || rawStatus === "done" ? rawStatus : "all";
     const d = db();
 
     const where: string[] = ["workspace_id = ?"];
@@ -20,6 +22,10 @@ export function solutionsRoutes() {
     if (language !== "all") {
       where.push("language = ?");
       params.push(language);
+    }
+    if (status !== "all") {
+      where.push("status = ?");
+      params.push(status);
     }
     if (q) {
       where.push("(title LIKE ? OR body LIKE ?)");
@@ -204,6 +210,38 @@ export function solutionsRoutes() {
       existing.problem_id,
       workspaceId,
     );
+    return res.json({ ok: true });
+  });
+
+  r.delete("/:id", (req, res) => {
+    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const d = db();
+    const ts = nowIso();
+
+    const existing = d
+      .prepare("SELECT id, problem_id FROM solutions WHERE id = ? AND workspace_id = ?")
+      .get(req.params.id, workspaceId) as { id: string; problem_id: string } | undefined;
+    if (!existing) return res.status(404).json({ error: "not_found" });
+
+    const tx = d.transaction(() => {
+      d.prepare("DELETE FROM solutions WHERE id = ? AND workspace_id = ?").run(existing.id, workspaceId);
+      d.prepare("INSERT INTO activities (id, workspace_id, type, at, problem_id, object_id) VALUES (?, ?, ?, ?, ?, ?)").run(
+        uuid("act"),
+        workspaceId,
+        "solution_deleted",
+        ts,
+        existing.problem_id,
+        existing.id,
+      );
+      d.prepare("UPDATE problems SET updated_at = ?, last_activity_at = ? WHERE id = ? AND workspace_id = ?").run(
+        ts,
+        ts,
+        existing.problem_id,
+        workspaceId,
+      );
+    });
+    tx();
+
     return res.json({ ok: true });
   });
 

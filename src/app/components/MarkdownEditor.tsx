@@ -13,6 +13,9 @@ export function MarkdownEditor({
   minRows = 16,
   minHeightClass = "min-h-[56vh]",
   defaultMode = "preview",
+  mode: modeProp,
+  onModeChange,
+  showModeSwitch = true,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -21,8 +24,12 @@ export function MarkdownEditor({
   minRows?: number;
   minHeightClass?: string;
   defaultMode?: Mode;
+  mode?: Mode;
+  onModeChange?: (mode: Mode) => void;
+  showModeSwitch?: boolean;
 }) {
-  const [mode, setMode] = useState<Mode>(defaultMode);
+  const [internalMode, setInternalMode] = useState<Mode>(defaultMode);
+  const mode = modeProp ?? internalMode;
 
   const rows = useMemo(() => Math.max(minRows, 10), [minRows]);
 
@@ -37,25 +44,31 @@ export function MarkdownEditor({
     >
       <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
         <div className="text-xs font-medium text-slate-300">Markdown</div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant={mode === "write" ? "primary" : "secondary"} onClick={() => setMode("write")}>
-            写作
-          </Button>
-          <Button
-            size="sm"
-            variant={mode === "split" ? "primary" : "secondary"}
-            onClick={() => setMode("split")}
-          >
-            分屏
-          </Button>
-          <Button
-            size="sm"
-            variant={mode === "preview" ? "primary" : "secondary"}
-            onClick={() => setMode("preview")}
-          >
-            预览
-          </Button>
-        </div>
+        {showModeSwitch ? (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={mode === "write" ? "primary" : "secondary"}
+              onClick={() => (modeProp ? onModeChange?.("write") : setInternalMode("write"))}
+            >
+              写作
+            </Button>
+            <Button
+              size="sm"
+              variant={mode === "split" ? "primary" : "secondary"}
+              onClick={() => (modeProp ? onModeChange?.("split") : setInternalMode("split"))}
+            >
+              分屏
+            </Button>
+            <Button
+              size="sm"
+              variant={mode === "preview" ? "primary" : "secondary"}
+              onClick={() => (modeProp ? onModeChange?.("preview") : setInternalMode("preview"))}
+            >
+              预览
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className={cn("grid flex-1 gap-0", mode === "split" ? "grid-cols-2" : "grid-cols-1")}>

@@ -111,16 +111,34 @@ export function Markdown({
   const theme = useTheme();
   const base = normalizeLatexInMath(normalizeBoldLabels(stripOuterMarkdownFence(stripFrontmatter(value))));
   const normalized = mode === "statement" ? normalizeStatementLayout(base) : base;
+  const isLight = theme.resolved === "light";
   return (
     <div
       className={cn(
-        theme.resolved === "light"
-          ? "prose max-w-none prose-pre:bg-black/5"
-          : "prose prose-invert max-w-none prose-pre:bg-black/30",
+        isLight ? "prose prose-sm max-w-none" : "prose prose-sm prose-invert max-w-none",
+        "prose-headings:font-semibold prose-headings:tracking-tight",
+        "prose-a:font-medium prose-a:underline-offset-4",
+        "prose-img:rounded-xl",
         className,
       )}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeHighlight]}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex, rehypeHighlight]}
+        components={{
+          a({ href, ...props }) {
+            const isExternal = typeof href === "string" && /^https?:\/\//i.test(href);
+            return <a href={href} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noreferrer" : undefined} {...props} />;
+          },
+          table({ ...props }) {
+            return (
+              <div className="overflow-x-auto">
+                <table {...props} />
+              </div>
+            );
+          },
+        }}
+      >
         {normalized}
       </ReactMarkdown>
     </div>

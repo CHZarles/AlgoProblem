@@ -1,7 +1,7 @@
 import type { WorkspaceDb } from "../types/model";
 import { seedWorkspaceDb } from "./seed";
 
-const STORAGE_KEY = "algoproblem.workspace.v1";
+const STORAGE_KEY = "algoproblem.workspace.v2";
 
 function safeParse(json: string | null): WorkspaceDb | null {
   if (!json) return null;
@@ -34,4 +34,3 @@ export function withDb<T>(fn: (db: WorkspaceDb) => T): T {
   saveDb(db);
   return result;
 }
-

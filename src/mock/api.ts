@@ -163,7 +163,7 @@ export function getProblem(problemId: string) {
     const problem = db.problems.find((p) => p.id === problemId);
     if (!problem) return null;
     const notes = db.notes
-      .filter((n) => n.kind === "problem" && n.problemId === problemId)
+      .filter((n) => n.problemIds.includes(problemId))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     const solutions = db.solutions
       .filter((s) => s.problemId === problemId)
@@ -214,7 +214,7 @@ export function getCollection(collectionId: string): Collection | null {
   return withDb((db) => db.collections.find((c) => c.id === collectionId) ?? null);
 }
 
-export function upsertNote(input: Pick<Note, "id" | "kind" | "problemId" | "title" | "body" | "tags">) {
+export function upsertNote(input: Pick<Note, "id" | "kind" | "problemIds" | "title" | "body" | "tags">) {
   return withDb((db) => {
     const existing = db.notes.find((n) => n.id === input.id);
     const ts = nowIso();
@@ -222,8 +222,9 @@ export function upsertNote(input: Pick<Note, "id" | "kind" | "problemId" | "titl
       existing.title = input.title;
       existing.body = input.body;
       existing.tags = input.tags;
+      existing.problemIds = input.problemIds;
       existing.updatedAt = ts;
-      addActivity("note_updated", { problemId: existing.problemId, objectId: existing.id });
+      addActivity("note_updated", { problemId: existing.problemIds[0], objectId: existing.id });
       return existing;
     }
     const note: Note = {
@@ -232,12 +233,12 @@ export function upsertNote(input: Pick<Note, "id" | "kind" | "problemId" | "titl
       updatedAt: ts,
     };
     db.notes.push(note);
-    addActivity("note_created", { problemId: note.problemId, objectId: note.id });
+    addActivity("note_created", { problemId: note.problemIds[0], objectId: note.id });
     return note;
   });
 }
 
-export function createNote(input: Pick<Note, "kind" | "problemId" | "title" | "body" | "tags">) {
+export function createNote(input: Pick<Note, "kind" | "problemIds" | "title" | "body" | "tags">) {
   const ts = nowIso();
   return withDb((db) => {
     const note: Note = {
@@ -251,7 +252,7 @@ export function createNote(input: Pick<Note, "kind" | "problemId" | "title" | "b
       id: id("act"),
       type: "note_created",
       at: ts,
-      problemId: note.problemId,
+      problemId: note.problemIds[0],
       objectId: note.id,
     });
     return note;

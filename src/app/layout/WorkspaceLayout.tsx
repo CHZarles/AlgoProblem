@@ -14,6 +14,16 @@ export default function WorkspaceLayout() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName.toLowerCase();
+        const isEditable =
+          tag === "input" ||
+          tag === "textarea" ||
+          (target as HTMLElement).isContentEditable ||
+          target.getAttribute("role") === "textbox";
+        if (isEditable) return;
+      }
       const hotkey = metaKey === "meta" ? e.metaKey : e.ctrlKey;
       if (hotkey && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -42,4 +52,3 @@ export default function WorkspaceLayout() {
     </div>
   );
 }
-

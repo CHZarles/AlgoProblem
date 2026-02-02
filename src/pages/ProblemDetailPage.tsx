@@ -1,18 +1,16 @@
-import { Check, ChevronsUpDown, ExternalLink, FolderPlus, PanelLeftClose, PanelLeftOpen, Plus, RefreshCcw, Sparkles } from "lucide-react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { ExternalLink, FolderPlus, PanelLeftClose, PanelLeftOpen, Plus, RefreshCcw } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import type { Difficulty, Note, ProblemStatus, Solution } from "../types/model";
+import type { Difficulty, ProblemStatus, Solution } from "../types/model";
 import {
-  createNote,
   createSolution,
   deleteProblem,
+  deleteSolution,
   getProblem,
   getProblemRelated,
   markReviewCompleted,
-  patchNote,
   patchProblem,
   patchSolution,
   removeProblemFromCollection,
@@ -21,6 +19,7 @@ import {
 } from "../api/client";
 import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
+import { DropdownSelect } from "../app/components/DropdownSelect";
 import { Input } from "../app/components/Input";
 import { Markdown } from "../app/components/Markdown";
 import { MarkdownEditor } from "../app/components/MarkdownEditor";
@@ -242,83 +241,20 @@ function ProblemMetaEditor({
   );
 }
 
-function NoteEditor({
-  note,
-  onPatch,
-  onConvertToSolution,
-}: {
-  note: Note;
-  onPatch: (patch: Partial<Pick<Note, "title" | "tags" | "body">>) => void;
-  onConvertToSolution: (body: string) => void;
-}) {
-  const [title, setTitle] = useState(note.title);
-  const [tagsText, setTagsText] = useState(note.tags.join(", "));
-  const [body, setBody] = useState(note.body);
-  const debounced = useDebouncedCallback(onPatch, 450);
-
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-12 gap-2">
-        <div className="col-span-8">
-          <Input
-            value={title}
-            onChange={(e) => {
-              const v = e.target.value;
-              setTitle(v);
-              debounced({ title: v });
-            }}
-            placeholder="笔记标题"
-          />
-        </div>
-        <div className="col-span-4">
-          <Input
-            value={tagsText}
-            onChange={(e) => {
-              const v = e.target.value;
-              setTagsText(v);
-              debounced({ tags: parseTags(v) });
-            }}
-            placeholder="标签（逗号分隔）"
-          />
-        </div>
-      </div>
-
-      <MarkdownEditor
-        value={body}
-        onChange={(v) => {
-          setBody(v);
-          debounced({ body: v });
-        }}
-        placeholder="- 记录思路 / 踩坑 / 复盘点"
-        minHeightClass="min-h-[52vh]"
-        minRows={14}
-      />
-
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-slate-500">最近更新：{new Date(note.updatedAt).toLocaleString()}</div>
-        <Button variant="secondary" onClick={() => onConvertToSolution(body)}>
-          <Sparkles className="h-4 w-4" />
-          转为题解草稿
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function SolutionEditor({
   solution,
-  onPatch,
+  onSave,
+  onDirtyChange,
   onPublish,
   onUnpublish,
+  onDelete,
 }: {
   solution: Solution;
-  onPatch: (
-    patch: Partial<
-      Pick<Solution, "title" | "language" | "version" | "status" | "timeComplexity" | "spaceComplexity" | "body">
-    >,
-  ) => void;
+  onSave: (patch: Pick<Solution, "title" | "language" | "timeComplexity" | "spaceComplexity" | "body">) => Promise<void>;
+  onDirtyChange?: (dirty: boolean) => void;
   onPublish: () => Promise<void>;
   onUnpublish: () => Promise<void>;
+  onDelete: () => Promise<void>;
 }) {
   const [title, setTitle] = useState(solution.title);
   const [language, setLanguage] = useState(solution.language);
@@ -326,160 +262,252 @@ function SolutionEditor({
   const [time, setTime] = useState(solution.timeComplexity ?? "");
   const [space, setSpace] = useState(solution.spaceComplexity ?? "");
   const [body, setBody] = useState(solution.body);
+  const [baseTitle, setBaseTitle] = useState(solution.title);
+  const [baseLanguage, setBaseLanguage] = useState(solution.language);
+  const [baseTime, setBaseTime] = useState(solution.timeComplexity ?? "");
+  const [baseSpace, setBaseSpace] = useState(solution.spaceComplexity ?? "");
+  const [baseBody, setBaseBody] = useState(solution.body);
   const [publishing, setPublishing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
 
-  const debounced = useDebouncedCallback(onPatch, 450);
   const languageOptions = [
-    { v: "cpp", label: "C++" },
-    { v: "java", label: "Java" },
-    { v: "python", label: "Python" },
-    { v: "go", label: "Go" },
-    { v: "ts", label: "TypeScript" },
-  ] as const;
-  const currentLangLabel = languageOptions.find((x) => x.v === language)?.label ?? language;
+    { value: "cpp", label: "C++" },
+    { value: "java", label: "Java" },
+    { value: "python", label: "Python" },
+    { value: "go", label: "Go" },
+    { value: "ts", label: "TypeScript" },
+  ] satisfies Array<{ value: string; label: string }>;
+
+  const dirty = useMemo(() => {
+    if (!editing) return false;
+    return (
+      title !== baseTitle ||
+      language !== baseLanguage ||
+      time !== baseTime ||
+      space !== baseSpace ||
+      body !== baseBody
+    );
+  }, [baseBody, baseLanguage, baseSpace, baseTime, baseTitle, body, editing, language, space, time, title]);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    setStatus(solution.status);
+  }, [solution.status]);
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-12 gap-2">
-        <div className="col-span-6">
-          <Input
-            value={title}
-            onChange={(e) => {
-              const v = e.target.value;
-              setTitle(v);
-              debounced({ title: v });
-            }}
-            placeholder="题解标题"
-          />
-        </div>
-        <div className="col-span-3">
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "flex h-9 w-full items-center justify-between gap-2 rounded-lg px-3 text-sm",
-                  "bg-white/6 text-slate-200 hover:bg-white/9",
-                  "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40",
-                )}
+      {!editing ? (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold text-slate-50">{title}</div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">
+                {language.toUpperCase()} · {solution.version}
+              </span>
+              <Badge tone={status === "done" ? "easy" : "neutral"}>{status === "done" ? "已发布" : "草稿"}</Badge>
+              {(time.trim() || space.trim()) ? (
+                <span className="truncate">
+                  {time.trim() ? `时间 ${time.trim()}` : null}
+                  {time.trim() && space.trim() ? " · " : null}
+                  {space.trim() ? `空间 ${space.trim()}` : null}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+              编辑
+            </Button>
+            {status === "done" ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={publishing || saving}
+                onClick={async () => {
+                  setPublishing(true);
+                  try {
+                    await onUnpublish();
+                    setStatus("draft");
+                    toast.success("已撤回为草稿");
+                  } catch {
+                    toast.error("操作失败");
+                  } finally {
+                    setPublishing(false);
+                  }
+                }}
               >
-                <span className="truncate font-medium">{currentLangLabel}</span>
-                <ChevronsUpDown className="h-4 w-4 text-slate-400" />
-              </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                sideOffset={8}
-                align="start"
-                className="w-48 rounded-xl bg-[#0F1520] p-1 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel"
+                撤回
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={publishing || saving}
+                onClick={async () => {
+                  setPublishing(true);
+                  try {
+                    await onPublish();
+                    setStatus("done");
+                    toast.success("已发布题解");
+                  } catch {
+                    toast.error("发布失败");
+                  } finally {
+                    setPublishing(false);
+                  }
+                }}
               >
-                {languageOptions.map((x) => {
-                  const selected = x.v === language;
-                  return (
-                    <DropdownMenu.Item
-                      key={x.v}
-                      onSelect={() => {
-                        setLanguage(x.v);
-                        debounced({ language: x.v });
-                      }}
-                      className={cn(
-                        "flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm outline-none",
-                        "text-slate-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-slate-50",
-                        selected && "bg-white/4",
-                      )}
-                    >
-                      <span className="font-medium">{x.label}</span>
-                      {selected ? <Check className="h-4 w-4 text-sky-500" /> : null}
-                    </DropdownMenu.Item>
-                  );
-                })}
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
+                发布
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-rose-300 hover:bg-rose-500/10 hover:text-rose-300"
+              disabled={publishing || saving}
+              onClick={async () => {
+                const ok = window.confirm("确认删除该题解？");
+                if (!ok) return;
+                try {
+                  await onDelete();
+                  toast.success("已删除题解");
+                } catch {
+                  toast.error("删除失败");
+                }
+              }}
+            >
+              删除
+            </Button>
+          </div>
         </div>
-        <div className="col-span-3 flex items-center justify-end">
-          <Badge tone={status === "done" ? "easy" : "neutral"}>{status === "done" ? "已发布" : "草稿"}</Badge>
-        </div>
-      </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-12 gap-2">
+            <div className="col-span-6">
+              <Input
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                }}
+                placeholder="题解标题"
+              />
+            </div>
+            <div className="col-span-3">
+              <DropdownSelect
+                value={language}
+                options={languageOptions}
+                onChange={(v) => {
+                  setLanguage(v);
+                }}
+              />
+            </div>
+            <div className="col-span-3 flex items-center justify-end">
+              <Badge tone={status === "done" ? "easy" : "neutral"}>{status === "done" ? "已发布" : "草稿"}</Badge>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-12 gap-2">
-        <div className="col-span-6">
-          <Input
-            value={time}
-            onChange={(e) => {
-              const v = e.target.value;
-              setTime(v);
-              debounced({ timeComplexity: v || undefined });
-            }}
-            placeholder="时间复杂度（如 O(n log n)）"
-          />
-        </div>
-        <div className="col-span-6">
-          <Input
-            value={space}
-            onChange={(e) => {
-              const v = e.target.value;
-              setSpace(v);
-              debounced({ spaceComplexity: v || undefined });
-            }}
-            placeholder="空间复杂度（如 O(n)）"
-          />
-        </div>
-      </div>
+          <div className="grid grid-cols-12 gap-2">
+            <div className="col-span-6">
+              <Input
+                value={time}
+                onChange={(e) => {
+                  setTime(e.target.value);
+                }}
+                placeholder="时间复杂度（如 O(n log n)）"
+              />
+            </div>
+            <div className="col-span-6">
+              <Input
+                value={space}
+                onChange={(e) => {
+                  setSpace(e.target.value);
+                }}
+                placeholder="空间复杂度（如 O(n)）"
+              />
+            </div>
+          </div>
 
-      <MarkdownEditor
-        value={body}
-        onChange={(v) => {
-          setBody(v);
-          debounced({ body: v });
-        }}
-        placeholder="按模板写清楚：思路/复杂度/代码/易错点/相似题"
-        minHeightClass="min-h-[52vh]"
-        minRows={16}
-      />
+          <MarkdownEditor
+            value={body}
+            onChange={(v) => {
+              setBody(v);
+            }}
+            placeholder="按模板写清楚：思路/复杂度/代码/易错点/相似题"
+            minHeightClass="min-h-[52vh]"
+            minRows={16}
+            mode="split"
+            showModeSwitch={false}
+          />
+        </>
+      )}
+
+      {!editing ? (
+        <div className="rounded-2xl bg-white/3 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+          <Markdown value={body || "（空）"} />
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between">
         <div className="text-xs text-slate-500">最近更新：{new Date(solution.updatedAt).toLocaleString()}</div>
-        {status === "done" ? (
-          <Button
-            variant="secondary"
-            disabled={publishing}
-            onClick={async () => {
-              setPublishing(true);
-              try {
-                await onUnpublish();
-                setStatus("draft");
-                toast.success("已撤回为草稿");
-              } catch {
-                toast.error("操作失败");
-              } finally {
-                setPublishing(false);
-              }
-            }}
-          >
-            撤回为草稿
-          </Button>
-        ) : (
-          <Button
-            variant="primary"
-            disabled={publishing}
-            onClick={async () => {
-              setPublishing(true);
-              try {
-                await onPublish();
-                setStatus("done");
-                toast.success("已发布题解");
-              } catch {
-                toast.error("发布失败");
-              } finally {
-                setPublishing(false);
-              }
-            }}
-          >
-            发布
-          </Button>
-        )}
+        {editing ? (
+          <div className="flex items-center gap-2">
+            {dirty ? <Badge tone="warn">未保存</Badge> : <Badge tone="neutral">已保存</Badge>}
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={saving || publishing}
+              onClick={() => {
+                if (dirty) {
+                  const ok = window.confirm("有未保存修改，确认丢弃？");
+                  if (!ok) return;
+                }
+                setTitle(baseTitle);
+                setLanguage(baseLanguage);
+                setTime(baseTime);
+                setSpace(baseSpace);
+                setBody(baseBody);
+                setEditing(false);
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={!dirty || saving || publishing}
+              onClick={async () => {
+                const trimmed = title.trim();
+                if (!trimmed) return toast.error("标题不能为空");
+                setSaving(true);
+                try {
+                  await onSave({
+                    title: trimmed,
+                    language,
+                    timeComplexity: time.trim() || undefined,
+                    spaceComplexity: space.trim() || undefined,
+                    body,
+                  });
+                  setBaseTitle(trimmed);
+                  setBaseLanguage(language);
+                  setBaseTime(time);
+                  setBaseSpace(space);
+                  setBaseBody(body);
+                  toast.success("已保存题解");
+                  setEditing(false);
+                } catch {
+                  toast.error("保存失败");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              {saving ? "保存中…" : "保存"}
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -508,31 +536,44 @@ export default function ProblemDetailPage() {
 
   const [solutionId, setSolutionId] = useState<string | null>(null);
   const activeSolution = solutions.find((s) => s.id === solutionId) ?? solutions[0] ?? null;
+  const [solutionDirty, setSolutionDirty] = useState(false);
   const [focusNotes, setFocusNotes] = useState(false);
   const [focusSolutions, setFocusSolutions] = useState(false);
   const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
   const [editingStatement, setEditingStatement] = useState(false);
   const [statementDraft, setStatementDraft] = useState("");
   const [statementFrontmatter, setStatementFrontmatter] = useState("");
+  const [statementBase, setStatementBase] = useState("");
   const [savingStatement, setSavingStatement] = useState(false);
 
-  const saveNoteDebounced = useDebouncedCallback(
-    (noteIdArg: string, patchArg: Partial<Pick<Note, "title" | "tags" | "body">>) => {
-      patchNote(noteIdArg, patchArg).then(() => detail.reload()).catch(() => toast.error("保存失败"));
-    },
-    450,
-  );
+  const statementDirty = useMemo(() => {
+    if (!editingStatement) return false;
+    return statementDraft !== statementBase;
+  }, [editingStatement, statementDraft, statementBase]);
 
-  const saveSolutionDebounced = useDebouncedCallback(
-    (
-      solutionIdArg: string,
-      patchArg: Partial<
-        Pick<Solution, "title" | "language" | "version" | "status" | "timeComplexity" | "spaceComplexity" | "body">
-      >,
-    ) => {
-      patchSolution(solutionIdArg, patchArg).then(() => detail.reload()).catch(() => toast.error("保存失败"));
+  const saveStatement = useCallback(
+    async ({ exitAfter }: { exitAfter: boolean }) => {
+      if (!problem) return;
+      const body = statementDraft.trim();
+      if (!body) {
+        toast.error("题面不能为空");
+        return;
+      }
+      const full = (statementFrontmatter ? `${statementFrontmatter.trimEnd()}\n\n` : "") + body + "\n";
+      setSavingStatement(true);
+      try {
+        await patchProblem(problem.id, { markdown: full });
+        toast.success("已保存题面");
+        setStatementBase(statementDraft);
+        if (exitAfter) setEditingStatement(false);
+        detail.reload();
+      } catch {
+        toast.error("保存失败");
+      } finally {
+        setSavingStatement(false);
+      }
     },
-    450,
+    [detail, problem, statementDraft, statementFrontmatter],
   );
 
   if (!pid) return null;
@@ -559,41 +600,6 @@ export default function ProblemDetailPage() {
       </div>
     );
   }
-
-  const saveNote = (patchArg: Partial<Pick<Note, "title" | "tags" | "body">>) => {
-    if (!activeNote) return;
-    saveNoteDebounced(activeNote.id, patchArg);
-  };
-
-  const saveSolution = (
-    patchArg: Partial<
-      Pick<Solution, "title" | "language" | "version" | "status" | "timeComplexity" | "spaceComplexity" | "body">
-    >,
-  ) => {
-    if (!activeSolution) return;
-    saveSolutionDebounced(activeSolution.id, patchArg);
-  };
-
-  const onCreateNote = () => {
-    createNote({
-      kind: "problem",
-      problemId: problem.id,
-      title: `${problem.title} · 笔记`,
-      body: "- ",
-      tags: [],
-    })
-      .then(({ id }) => {
-        toast.success("已创建笔记");
-        detail.reload();
-        setNoteId(id);
-      })
-      .catch(() => toast.error("创建失败"));
-    setSearchParams((sp) => {
-      const next = new URLSearchParams(sp);
-      next.set("tab", "notes");
-      return next;
-    });
-  };
 
   const onCreateSolution = (seed?: Partial<Solution>) => {
     createSolution({
@@ -665,18 +671,10 @@ export default function ProblemDetailPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={() => onCreateNote()}>
-              <Plus className="h-4 w-4" />
-              新建笔记
-            </Button>
-            <Button variant="secondary" onClick={() => onCreateSolution()}>
-              <Plus className="h-4 w-4" />
-              新建题解
-            </Button>
             <Button
               variant="danger"
               onClick={() => {
-                const ok = window.confirm("确认删除该题目？将同时删除该题目的题解/题目笔记/题集关联。");
+                const ok = window.confirm("确认删除该题目？将删除该题目的题解/题集关联，并解除所有笔记关联（笔记本身不会删除）。");
                 if (!ok) return;
                 deleteProblem(problem.id)
                   .then(() => {
@@ -726,17 +724,23 @@ export default function ProblemDetailPage() {
 
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 lg:col-span-8">
-          <div className="rounded-2xl bg-white/3 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-            <Tabs.Root
-              value={tab}
-              onValueChange={(v) =>
-                setSearchParams((sp) => {
-                  const next = new URLSearchParams(sp);
-                  next.set("tab", v);
-                  return next;
-                })
-              }
-            >
+	          <div className="rounded-2xl bg-white/3 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+	            <Tabs.Root
+	              value={tab}
+	              onValueChange={(v) => {
+	                if (v === tab) return;
+	                if (tab === "solutions" && solutionDirty && v !== "solutions") {
+	                  const ok = window.confirm("题解有未保存修改，确认离开？");
+	                  if (!ok) return;
+	                  setSolutionDirty(false);
+	                }
+	                setSearchParams((sp) => {
+	                  const next = new URLSearchParams(sp);
+	                  next.set("tab", v);
+	                  return next;
+	                });
+	              }}
+	            >
               <Tabs.List className="flex items-center gap-1 border-b border-white/8 p-2">
                 {[
                   { v: "statement", t: "题面" },
@@ -760,87 +764,78 @@ export default function ProblemDetailPage() {
               <div className="p-3">
                 <Tabs.Content value="statement">
                   <div className="rounded-2xl bg-black/10 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <div className="text-xs text-slate-500">题面</div>
-                      {!editingStatement ? (
-                        <Button
+	                    <div className="mb-3 flex items-center justify-between gap-2">
+	                      <div className="text-xs text-slate-500">题面</div>
+	                      {!editingStatement ? (
+	                        <Button
                           size="sm"
                           variant="secondary"
-                          onClick={() => {
-                            const { frontmatter, body } = splitFrontmatter(problem.markdown);
-                            setStatementFrontmatter(frontmatter);
-                            setStatementDraft(body);
-                            setEditingStatement(true);
-                          }}
-                        >
-                          编辑题面
+	                          onClick={() => {
+	                            const { frontmatter, body } = splitFrontmatter(problem.markdown);
+	                            setStatementFrontmatter(frontmatter);
+	                            setStatementDraft(body);
+	                            setStatementBase(body);
+	                            setEditingStatement(true);
+	                          }}
+	                        >
+	                          编辑题面
                         </Button>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            disabled={savingStatement}
-                            onClick={() => {
-                              setEditingStatement(false);
-                              setStatementDraft("");
-                              setStatementFrontmatter("");
-                            }}
-                          >
-                            取消
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            disabled={savingStatement}
-                            onClick={async () => {
-                              const body = statementDraft.trim();
-                              if (!body) {
-                                toast.error("题面不能为空");
-                                return;
-                              }
-                              const full = (statementFrontmatter ? `${statementFrontmatter.trimEnd()}\n\n` : "") + body + "\n";
-                              setSavingStatement(true);
-                              try {
-                                await patchProblem(problem.id, { markdown: full });
-                                toast.success("已保存题面");
-                                setEditingStatement(false);
-                                detail.reload();
-                              } catch {
-                                toast.error("保存失败");
-                              } finally {
-                                setSavingStatement(false);
-                              }
-                            }}
-                          >
-                            {savingStatement ? "保存中…" : "保存"}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+	                      ) : (
+	                        <div className="flex items-center gap-2">
+	                          {statementDirty ? <Badge tone="warn">未保存</Badge> : <Badge tone="neutral">已保存</Badge>}
+	                          <Button
+	                            size="sm"
+	                            variant="secondary"
+	                            disabled={savingStatement}
+	                            onClick={() => {
+	                              setEditingStatement(false);
+	                              setStatementDraft("");
+	                              setStatementFrontmatter("");
+	                              setStatementBase("");
+	                            }}
+	                          >
+	                            取消
+	                          </Button>
+	                          <Button
+	                            size="sm"
+	                            variant="primary"
+	                            disabled={savingStatement || !statementDirty}
+	                            onClick={() => void saveStatement({ exitAfter: true })}
+	                          >
+	                            {savingStatement ? "保存中…" : "保存"}
+	                          </Button>
+	                        </div>
+	                      )}
+	                    </div>
 
-                    {editingStatement ? (
-                      <MarkdownEditor
-                        value={statementDraft}
-                        onChange={setStatementDraft}
-                        placeholder="粘贴/编辑题面 Markdown（支持 $...$ / $$...$$）"
+		                    {editingStatement ? (
+		                      <MarkdownEditor
+		                        value={statementDraft}
+		                        onChange={setStatementDraft}
+		                        placeholder="粘贴/编辑题面 Markdown（支持 $...$ / $$...$$）"
                         minHeightClass="min-h-[54vh]"
                         minRows={16}
-                        defaultMode="split"
-                      />
-                    ) : (
-                      <Markdown value={problem.markdown} mode="statement" />
-                    )}
-                  </div>
-                </Tabs.Content>
+		                        mode="split"
+		                        showModeSwitch={false}
+		                      />
+		                    ) : (
+		                      tab === "statement" ? <Markdown value={problem.markdown} mode="statement" /> : null
+		                    )}
+	                  </div>
+	                </Tabs.Content>
 
                 <Tabs.Content value="notes">
                   <div className="mb-3 flex items-center justify-between gap-2">
-                    <div className="text-xs text-slate-500">笔记：过程沉淀（可转题解草稿）</div>
-                    <Button variant="secondary" size="sm" onClick={() => setFocusNotes((v) => !v)}>
-                      {focusNotes ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-                      {focusNotes ? "显示列表" : "聚焦编辑"}
-                    </Button>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <span>笔记关联</span>
+                      <span className="rounded-full bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">{notes.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => setFocusNotes((v) => !v)}>
+                        {focusNotes ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                        {focusNotes ? "显示列表" : "聚焦信息"}
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-12 gap-3">
                     {!focusNotes ? (
@@ -849,22 +844,44 @@ export default function ProblemDetailPage() {
                           <div className="max-h-[52vh] overflow-auto">
                         {notes.length ? (
                           <div className="space-y-1">
-                            {notes.map((n) => {
-                              const selectedId = noteId ?? notes[0]?.id;
-                              const isActive = selectedId === n.id;
-                              return (
-                              <button
-                                key={n.id}
-                                type="button"
-                                onClick={() => setNoteId(n.id)}
-                                className={cn(
-                                  "w-full rounded-xl px-3 py-2 text-left",
-                                  isActive ? "bg-white/8" : "hover:bg-white/6",
-                                )}
+	                            {notes.map((n) => {
+	                              const selectedId = noteId ?? notes[0]?.id;
+	                              const isActive = selectedId === n.id;
+	                              return (
+	                              <button
+	                                key={n.id}
+	                                type="button"
+	                                onClick={() => {
+	                                  if (isActive) return;
+	                                  setNoteId(n.id);
+	                                }}
+	                                className={cn(
+	                                  "group w-full rounded-xl px-3 py-2 text-left transition",
+	                                  isActive
+	                                    ? "bg-white/8 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)]"
+	                                    : "hover:bg-white/6",
+	                                )}
                               >
-                                <div className="truncate text-sm text-slate-200">{n.title}</div>
-                                <div className="mt-0.5 truncate text-xs text-slate-500">
-                                  {new Date(n.updatedAt).toLocaleString()}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <div className="truncate text-sm font-medium text-slate-200">{n.title}</div>
+                                    <div className="mt-0.5 truncate text-xs text-slate-500">
+                                      <span className="text-slate-400">{n.kind === "knowledge" ? "知识笔记" : "题目笔记"}</span>
+                                      {n.tags.length ? (
+                                        <>
+                                          {" "}
+                                          ·{" "}
+                                          {n.tags
+                                            .slice(0, 3)
+                                            .map((t) => `#${t}`)
+                                            .join(" ")}
+                                        </>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  <div className="shrink-0 pt-0.5 text-[11px] text-slate-500 group-hover:text-slate-400">
+                                    {new Date(n.updatedAt).toLocaleDateString()}
+                                  </div>
                                 </div>
                               </button>
                               );
@@ -879,22 +896,50 @@ export default function ProblemDetailPage() {
                     ) : null}
 
                     <div className={cn("col-span-12", focusNotes ? "md:col-span-12" : "md:col-span-9")}>
-                      {activeNote ? (
-                        <NoteEditor
-                          key={activeNote.id}
-                          note={activeNote}
-                          onPatch={(p) => saveNote(p)}
-                          onConvertToSolution={(body) =>
-                            onCreateSolution({
-                              title: `${problem.title} · 从笔记转题解`,
-                              status: "draft",
-                              body: `## 思路\n${body}\n\n## 复杂度\n- 时间：\n- 空间：\n\n## 代码\n\`\`\`cpp\n\n\`\`\`\n`,
-                            })
-                          }
-                        />
-                      ) : (
+	                      {activeNote ? (
+                          <div className="rounded-2xl bg-black/10 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="truncate text-base font-semibold text-slate-50">{activeNote.title}</div>
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-300">
+                                    {activeNote.kind === "knowledge" ? "知识笔记" : "题目笔记"}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    更新于 {new Date(activeNote.updatedAt).toLocaleString()}
+                                  </span>
+                                </div>
+                                {activeNote.tags.length ? (
+                                  <div className="mt-3 flex flex-wrap gap-1.5">
+                                    {activeNote.tags.slice(0, 8).map((t) => (
+                                      <span key={t} className="rounded-full bg-white/6 px-2 py-0.5 text-[11px] text-slate-300">
+                                        #{t}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                              <Button size="sm" variant="secondary" onClick={() => navigate(`/notes?note=${activeNote.id}`)}>
+                                打开
+                              </Button>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-12 gap-2">
+                              <div className="col-span-6 rounded-xl bg-white/4 px-3 py-2">
+                                <div className="text-xs text-slate-500">关联题目</div>
+                                <div className="mt-0.5 text-sm text-slate-200">{activeNote.problemIds.length}</div>
+                              </div>
+                              <div className="col-span-6 rounded-xl bg-white/4 px-3 py-2">
+                                <div className="text-xs text-slate-500">创建时间</div>
+                                <div className="mt-0.5 text-sm text-slate-200">
+                                  {new Date(activeNote.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
                         <div className="rounded-2xl bg-black/10 p-4 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-                          选择一条笔记开始编辑
+                          选择一条笔记查看
                         </div>
                       )}
                     </div>
@@ -904,10 +949,16 @@ export default function ProblemDetailPage() {
                 <Tabs.Content value="solutions">
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <div className="text-xs text-slate-500">题解：草稿 → 发布（用于题库标记与统计）</div>
-                    <Button variant="secondary" size="sm" onClick={() => setFocusSolutions((v) => !v)}>
-                      {focusSolutions ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-                      {focusSolutions ? "显示列表" : "聚焦编辑"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => onCreateSolution()}>
+                        <Plus className="h-4 w-4" />
+                        新建题解
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => setFocusSolutions((v) => !v)}>
+                        {focusSolutions ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                        {focusSolutions ? "显示列表" : "聚焦编辑"}
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-12 gap-3">
                     {!focusSolutions ? (
@@ -916,18 +967,26 @@ export default function ProblemDetailPage() {
                           <div className="max-h-[52vh] overflow-auto">
                         {solutions.length ? (
                           <div className="space-y-1">
-                            {solutions.map((s) => {
-                              const selectedId = solutionId ?? solutions[0]?.id;
-                              const isActive = selectedId === s.id;
-                              return (
-                              <button
-                                key={s.id}
-                                type="button"
-                                onClick={() => setSolutionId(s.id)}
-                                className={cn(
-                                  "w-full rounded-xl px-3 py-2 text-left",
-                                  isActive ? "bg-white/8" : "hover:bg-white/6",
-                                )}
+	                            {solutions.map((s) => {
+	                              const selectedId = solutionId ?? solutions[0]?.id;
+	                              const isActive = selectedId === s.id;
+	                              return (
+	                              <button
+	                                key={s.id}
+	                                type="button"
+	                                onClick={() => {
+	                                  if (isActive) return;
+	                                  if (solutionDirty) {
+	                                    const ok = window.confirm("有未保存修改，确认丢弃？");
+	                                    if (!ok) return;
+	                                  }
+	                                  setSolutionDirty(false);
+	                                  setSolutionId(s.id);
+	                                }}
+	                                className={cn(
+	                                  "w-full rounded-xl px-3 py-2 text-left",
+	                                  isActive ? "bg-white/8" : "hover:bg-white/6",
+	                                )}
                               >
                                 <div className="truncate text-sm text-slate-200">{s.title}</div>
                                 <div className="mt-0.5 truncate text-xs text-slate-500">
@@ -946,17 +1005,27 @@ export default function ProblemDetailPage() {
                     ) : null}
 
                     <div className={cn("col-span-12", focusSolutions ? "md:col-span-12" : "md:col-span-9")}>
-                      {activeSolution ? (
-                        <SolutionEditor
-                          key={activeSolution.id}
-                          solution={activeSolution}
-                          onPatch={(p) => saveSolution(p)}
-                          onPublish={() => patchSolution(activeSolution.id, { status: "done" }).then(() => detail.reload())}
-                          onUnpublish={() => patchSolution(activeSolution.id, { status: "draft" }).then(() => detail.reload())}
-                        />
-                      ) : (
+	                      {activeSolution ? (
+	                        <SolutionEditor
+	                          key={activeSolution.id}
+	                          solution={activeSolution}
+	                          onDirtyChange={setSolutionDirty}
+	                          onSave={async (patch) => {
+	                            await patchSolution(activeSolution.id, patch);
+	                            detail.reload();
+	                          }}
+                            onDelete={async () => {
+                              await deleteSolution(activeSolution.id);
+                              setSolutionId(null);
+                              setSolutionDirty(false);
+                              detail.reload();
+                            }}
+	                          onPublish={() => patchSolution(activeSolution.id, { status: "done" }).then(() => detail.reload())}
+	                          onUnpublish={() => patchSolution(activeSolution.id, { status: "draft" }).then(() => detail.reload())}
+	                        />
+	                      ) : (
                         <div className="rounded-2xl bg-black/10 p-4 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-                          选择一份题解开始编辑
+                          选择一份题解查看
                         </div>
                       )}
                     </div>

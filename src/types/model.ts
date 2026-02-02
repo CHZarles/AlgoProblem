@@ -13,8 +13,12 @@ export type ActivityType =
   | "review_completed"
   | "note_created"
   | "note_updated"
+  | "note_deleted"
+  | "note_linked"
+  | "note_unlinked"
   | "solution_created"
   | "solution_updated"
+  | "solution_deleted"
   | "solution_published"
   | "solution_unpublished";
 
@@ -47,7 +51,7 @@ export type Problem = {
 export type Note = {
   id: string;
   kind: "problem" | "knowledge";
-  problemId?: string;
+  problemIds: string[];
   title: string;
   body: string;
   tags: string[]; // includes "错因" tags etc.

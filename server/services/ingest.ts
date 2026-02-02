@@ -19,6 +19,16 @@ export type IngestedProblem = {
 export type StructuredFetchedProblem = Omit<IngestedProblem, "markdown"> & { contentHtml: string };
 export type FetchStructuredOptions = { acwingCookie?: string };
 
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  // Node 18+ supports AbortSignal.timeout(); keep a fallback for older runtimes.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anyAbortSignal = AbortSignal as any;
+  if (typeof anyAbortSignal?.timeout === "function") return anyAbortSignal.timeout(ms) as AbortSignal;
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+}
+
 function toDifficulty(raw: string | null | undefined): IngestedProblem["difficulty"] {
   if (!raw) return "unknown";
   const v = raw.toLowerCase();
@@ -50,7 +60,10 @@ function platformFromUrl(rawUrl: string) {
 }
 
 async function fetchHtml(url: string) {
-  const resp = await fetch(url, { headers: { "user-agent": "AlgoWorkspace/1.0" } });
+  const resp = await fetch(url, {
+    headers: { "user-agent": "AlgoWorkspace/1.0" },
+    signal: timeoutSignal(15000),
+  });
   if (!resp.ok) throw new Error(`抓取失败（${resp.status}）`);
   const html = await resp.text();
   if (!html.trim()) throw new Error("抓取失败（空内容）");
@@ -152,17 +165,18 @@ async function fetchLeetCode(slug: string, prefer: "cn" | "com") {
   let lastStatus = 0;
   let lastContentType = "";
 
-  for (const ep of endpoints) {
-    const resp = await fetch(ep.api, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        referer: ep.referer,
-        // leetcode.cn may require browser-like UA for some regions; harmless for leetcode.com.
-        "user-agent": "AlgoWorkspace/1.0",
-      },
-      body: JSON.stringify(payload),
-    });
+	  for (const ep of endpoints) {
+	    const resp = await fetch(ep.api, {
+	      method: "POST",
+	      headers: {
+	        "content-type": "application/json",
+	        referer: ep.referer,
+	        // leetcode.cn may require browser-like UA for some regions; harmless for leetcode.com.
+	        "user-agent": "AlgoWorkspace/1.0",
+	      },
+	      body: JSON.stringify(payload),
+	      signal: timeoutSignal(15000),
+	    });
     lastStatus = resp.status;
     lastContentType = resp.headers.get("content-type") ?? "";
     if (!resp.ok) continue;
@@ -196,18 +210,20 @@ async function fetchLeetCode(slug: string, prefer: "cn" | "com") {
     return parsed.data.data.question;
   }
 
+  if (lastContentType.includes("text/html")) throw new Error("抓取失败（可能被反爬/验证码）");
   throw new Error(`LeetCode 抓取失败（${lastStatus || "network"}）`);
 }
 
-async function fetchAcWing(id: string, opts?: FetchStructuredOptions) {
-  const url = `https://www.acwing.com/problem/content/description/${id}/`;
-  const resp = await fetch(url, {
-    headers: {
-      "user-agent": "AlgoWorkspace/1.0",
-      ...(opts?.acwingCookie ? { cookie: opts.acwingCookie } : {}),
-      referer: `https://www.acwing.com/problem/content/${id}/`,
-    },
-  });
+	async function fetchAcWing(id: string, opts?: FetchStructuredOptions) {
+	  const url = `https://www.acwing.com/problem/content/description/${id}/`;
+	  const resp = await fetch(url, {
+	    headers: {
+	      "user-agent": "AlgoWorkspace/1.0",
+	      ...(opts?.acwingCookie ? { cookie: opts.acwingCookie } : {}),
+	      referer: `https://www.acwing.com/problem/content/${id}/`,
+	    },
+	    signal: timeoutSignal(15000),
+	  });
   if (!resp.ok) throw new Error(`AcWing 抓取失败（${resp.status}）`);
   const html = await resp.text();
   const $ = load(html);

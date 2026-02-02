@@ -1,9 +1,9 @@
 import type { Activity, Collection, Note, Problem, Solution } from "../types/model";
-import { apiFetch } from "./http";
+import { apiFetch, apiFetchBlob } from "./http";
 
 export type SearchResult = {
   problems: Array<Pick<Problem, "id" | "platform" | "externalId" | "canonicalUrl" | "title" | "tags">>;
-  notes: Array<Pick<Note, "id" | "kind" | "problemId" | "title" | "tags">>;
+  notes: Array<Pick<Note, "id" | "kind" | "problemIds" | "title" | "tags">>;
   solutions: Array<Pick<Solution, "id" | "problemId" | "title" | "language" | "version" | "status">>;
 };
 
@@ -22,7 +22,9 @@ export async function listProblems(params: {
   hasNotes?: "all" | boolean;
   collectionId?: "all" | string;
   tags?: string[];
-}): Promise<Problem[]> {
+  limit?: number;
+  offset?: number;
+}): Promise<{ items: Problem[]; total: number; limit: number; offset: number }> {
   const sp = new URLSearchParams();
   if (params.q) sp.set("q", params.q);
   sp.set("platform", params.platform ?? "all");
@@ -37,6 +39,8 @@ export async function listProblems(params: {
   if (params.collectionId && params.collectionId !== "all") sp.set("collectionId", params.collectionId);
   if (params.collectionId === "all" || params.collectionId === undefined) sp.set("collectionId", "all");
   if (params.tags?.length) sp.set("tags", params.tags.join(","));
+  if (params.limit) sp.set("limit", String(params.limit));
+  if (params.offset) sp.set("offset", String(params.offset));
   return apiFetch(`/problems?${sp.toString()}`);
 }
 
@@ -55,7 +59,12 @@ export async function listProblemPlatforms(
 }
 
 export async function ingestProblems(urls: string[]) {
-  return apiFetch<{ results: Array<{ url: string; ok: boolean; problem?: Problem; warnings?: string[]; error?: string }> }>(
+  return apiFetch<{
+    results: Array<
+      | { url: string; ok: true; problem?: Problem; warnings?: string[] }
+      | { url: string; ok: false; error?: string; code?: string; httpStatus?: number }
+    >;
+  }>(
     "/problems/ingest",
     { method: "POST", body: JSON.stringify({ urls }) },
   );
@@ -119,14 +128,17 @@ export async function createProblemManual(input: { title: string; markdown: stri
   });
 }
 
-export async function listNotes(params: { q?: string; kind?: "all" | Note["kind"] }): Promise<Note[]> {
+export async function listNotes(params: { q?: string; kind?: "all" | Note["kind"]; problemId?: string }): Promise<Note[]> {
   const sp = new URLSearchParams();
   if (params.q) sp.set("q", params.q);
   sp.set("kind", params.kind ?? "all");
+  if (params.problemId) sp.set("problemId", params.problemId);
   return apiFetch(`/notes?${sp.toString()}`);
 }
 
-export async function createNote(input: Pick<Note, "kind" | "problemId" | "title" | "body" | "tags">) {
+export async function createNote(
+  input: Pick<Note, "kind" | "title" | "body" | "tags"> & { problemId?: string; problemIds?: string[] },
+) {
   return apiFetch<{ id: string }>("/notes", { method: "POST", body: JSON.stringify(input) });
 }
 
@@ -134,10 +146,32 @@ export async function patchNote(noteId: string, patch: Partial<Pick<Note, "title
   return apiFetch<{ ok: true }>(`/notes/${noteId}`, { method: "PATCH", body: JSON.stringify(patch) });
 }
 
-export async function listSolutions(params: { q?: string; language?: string | "all" }): Promise<Solution[]> {
+export async function deleteNote(noteId: string) {
+  return apiFetch<{ ok: true }>(`/notes/${noteId}`, { method: "DELETE" });
+}
+
+export async function getNote(noteId: string): Promise<{
+  note: Note;
+  problems: Array<
+    Pick<Problem, "id" | "platform" | "canonicalUrl" | "externalId" | "title" | "difficulty" | "status" | "tags">
+  >;
+}> {
+  return apiFetch(`/notes/${noteId}`);
+}
+
+export async function linkNote(noteId: string, input: { problemId?: string; problemIds?: string[] }) {
+  return apiFetch<{ ok: true }>(`/notes/${noteId}/links`, { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function unlinkNote(noteId: string, problemId: string) {
+  return apiFetch<{ ok: true }>(`/notes/${noteId}/links/${problemId}`, { method: "DELETE" });
+}
+
+export async function listSolutions(params: { q?: string; language?: string | "all"; status?: "all" | "draft" | "done" }): Promise<Solution[]> {
   const sp = new URLSearchParams();
   if (params.q) sp.set("q", params.q);
   sp.set("language", params.language ?? "all");
+  sp.set("status", params.status ?? "all");
   return apiFetch(`/solutions?${sp.toString()}`);
 }
 
@@ -167,6 +201,10 @@ export async function patchSolution(
   >,
 ) {
   return apiFetch<{ ok: true }>(`/solutions/${solutionId}`, { method: "PATCH", body: JSON.stringify(patch) });
+}
+
+export async function deleteSolution(solutionId: string) {
+  return apiFetch<{ ok: true }>(`/solutions/${solutionId}`, { method: "DELETE" });
 }
 
 export async function listCollections(): Promise<Collection[]> {
@@ -297,6 +335,7 @@ export type Settings = {
   llmApiKeyLast4?: string;
   acwingCookieSet: boolean;
   acwingCookieLast4?: string;
+  workspaceLastBackupAt?: string;
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -318,4 +357,12 @@ export async function testLlm(): Promise<{ ok: true; content: string; requestId?
 
 export async function testAcwing(url: string): Promise<{ ok: true; title?: string }> {
   return apiFetch("/settings/test-acwing", { method: "POST", body: JSON.stringify({ url }) });
+}
+
+export async function exportWorkspace(): Promise<Blob> {
+  return apiFetchBlob("/workspace/export");
+}
+
+export async function importWorkspace(payload: unknown): Promise<{ ok: true; imported: { problems: number; notes: number; solutions: number; collections: number } }> {
+  return apiFetch("/workspace/import", { method: "POST", body: JSON.stringify(payload) });
 }

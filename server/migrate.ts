@@ -61,6 +61,14 @@ export function migrate() {
       FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS note_problems (
+      note_id TEXT NOT NULL,
+      problem_id TEXT NOT NULL,
+      PRIMARY KEY (note_id, problem_id),
+      FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE,
+      FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS solutions (
       id TEXT PRIMARY KEY,
       workspace_id TEXT NOT NULL,
@@ -135,6 +143,8 @@ export function migrate() {
     CREATE INDEX IF NOT EXISTS idx_notes_updated ON notes(workspace_id, updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_solutions_updated ON solutions(workspace_id, updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_activities_at ON activities(workspace_id, at DESC);
+    CREATE INDEX IF NOT EXISTS idx_note_problems_problem ON note_problems(problem_id);
+    CREATE INDEX IF NOT EXISTS idx_note_problems_note ON note_problems(note_id);
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_problem_relations_unique_type ON problem_relations(workspace_id, from_problem_id, type);
     CREATE INDEX IF NOT EXISTS idx_problem_relations_to ON problem_relations(workspace_id, to_problem_id, type);
@@ -211,6 +221,16 @@ export function migrate() {
       if (current && current !== "[]") continue;
       const next = JSON.stringify([r.source_url]);
       upd.run(next, r.id);
+    }
+
+    // Migrate legacy note.problem_id -> note_problems (best-effort).
+    try {
+      d.exec(`
+        INSERT OR IGNORE INTO note_problems (note_id, problem_id)
+        SELECT id, problem_id FROM notes WHERE problem_id IS NOT NULL AND trim(problem_id) <> ''
+      `);
+    } catch {
+      // ignore
     }
 
     // Backfill solution_published activities for existing published solutions (best-effort).

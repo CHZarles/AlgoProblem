@@ -94,7 +94,7 @@ fetched_at: ${nowIso}
       {
         id: "n_twosum_pitfalls",
         kind: "problem",
-        problemId: "p_lc_twosum",
+        problemIds: ["p_lc_twosum"],
         title: "Two Sum：踩坑与边界",
         tags: ["错因:边界", "hash"],
         body: `- 先存再查 vs 先查再存：注意 target - nums[i] 等于自身时的处理\n- 返回下标，不要返回值\n- 题面保证唯一解（否则需要返回任意/全部）`,
@@ -104,6 +104,7 @@ fetched_at: ${nowIso}
       {
         id: "n_monotonic_stack",
         kind: "knowledge",
+        problemIds: [],
         title: "单调栈模板（知识笔记）",
         tags: ["datastructure", "template"],
         body: `常见场景：下一个更大元素 / 柱状图最大矩形。\n\n\`\`\`cpp\n// 维护单调递增栈（存下标）\nfor (int i = 0; i < n; i++) {\n  while (!st.empty() && a[st.top()] >= a[i]) st.pop();\n  left[i] = st.empty() ? -1 : st.top();\n  st.push(i);\n}\n\`\`\`\n`,
@@ -138,4 +139,3 @@ fetched_at: ${nowIso}
     ],
   };
 }
-

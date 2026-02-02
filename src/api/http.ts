@@ -34,3 +34,21 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
   return body as T;
 }
+
+export async function apiFetchBlob(path: string, init?: RequestInit): Promise<Blob> {
+  const resp = await fetch(path.startsWith("/api") ? path : `/api${path}`, {
+    ...init,
+    credentials: "include",
+    headers: {
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (!resp.ok) {
+    const contentType = resp.headers.get("content-type") ?? "";
+    const isJson = contentType.includes("application/json");
+    const body = isJson ? await resp.json().catch(() => undefined) : await resp.text().catch(() => undefined);
+    throw new ApiError(errorFromBody(body), resp.status, body);
+  }
+  return resp.blob();
+}

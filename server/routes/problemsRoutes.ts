@@ -5,6 +5,7 @@ import { requireWorkspace } from "../http";
 import { db } from "../db";
 import { nowIso, uuid } from "../ids";
 import { ingestOne, parseProblemUrl } from "../services/ingest";
+import { classifyIngestError, type IngestFailureCode } from "../services/ingestError";
 import { ingestWithLlm } from "../services/llmIngest";
 import { reviewCheckin } from "../services/review";
 
@@ -142,6 +143,8 @@ export function problemsRoutes() {
     const platform = (req.query.platform as string | undefined) ?? "all";
     const difficulty = (req.query.difficulty as string | undefined) ?? "all";
     const status = (req.query.status as string | undefined) ?? "all";
+    const limit = Math.max(1, Math.min(200, Number(req.query.limit ?? 50)));
+    const offset = Math.max(0, Number(req.query.offset ?? 0));
     const hasSolution = (req.query.hasSolution as string | undefined) ?? "all";
     const hasNotesRaw = req.query.hasNotes as string | string[] | undefined;
     const hasNotes = (Array.isArray(hasNotesRaw) ? hasNotesRaw[0] : (hasNotesRaw ?? "all")).trim() || "all";
@@ -184,8 +187,14 @@ export function problemsRoutes() {
         );
     }
     if (hasNotes !== "all") {
-      if (hasNotes === "true") where.push("EXISTS (SELECT 1 FROM notes n WHERE n.problem_id = p.id AND n.workspace_id = p.workspace_id)");
-      if (hasNotes === "false") where.push("NOT EXISTS (SELECT 1 FROM notes n WHERE n.problem_id = p.id AND n.workspace_id = p.workspace_id)");
+      if (hasNotes === "true")
+        where.push(
+          "EXISTS (SELECT 1 FROM note_problems np JOIN notes n ON n.id = np.note_id WHERE np.problem_id = p.id AND n.workspace_id = p.workspace_id)",
+        );
+      if (hasNotes === "false")
+        where.push(
+          "NOT EXISTS (SELECT 1 FROM note_problems np JOIN notes n ON n.id = np.note_id WHERE np.problem_id = p.id AND n.workspace_id = p.workspace_id)",
+        );
     }
     if (collectionId !== "all") {
       where.push(
@@ -206,11 +215,35 @@ export function problemsRoutes() {
       params.push(like, like, like, like);
     }
 
+    const total = (
+      d.prepare(`SELECT COUNT(1) as c FROM problems p WHERE ${where.join(" AND ")}`).get(...params) as { c: number }
+    ).c;
+
     const rows = d
       .prepare(
         `
         SELECT
-          p.*,
+          p.id,
+          p.platform,
+          p.canonical_url,
+          p.source_url,
+          p.source_urls_json,
+          p.external_id,
+          p.title,
+          p.difficulty,
+          p.difficulty_score,
+          p.status,
+          p.completed_at,
+          p.tags_json,
+          p.created_at,
+          p.updated_at,
+          p.last_activity_at,
+          p.review_next_at,
+          p.review_interval_days,
+          p.review_ease,
+          p.review_count,
+          p.review_last_at,
+          p.review_mistake_tags_json,
           EXISTS (SELECT 1 FROM solutions s WHERE s.problem_id = p.id AND s.workspace_id = p.workspace_id AND s.status = 'done' AND s.published_at IS NOT NULL) AS has_solution,
           COALESCE(group_concat(cp.collection_id), '') AS collection_ids
         FROM problems p
@@ -218,9 +251,10 @@ export function problemsRoutes() {
         WHERE ${where.join(" AND ")}
         GROUP BY p.id
         ORDER BY p.last_activity_at DESC
+        LIMIT ? OFFSET ?
       `,
       )
-      .all(...params) as Array<Record<string, unknown>>;
+      .all(...params, limit, offset) as Array<Record<string, unknown>>;
 
     const out = rows.map((row) => ({
       id: row.id as string,
@@ -238,7 +272,7 @@ export function problemsRoutes() {
       collections: String(row.collection_ids || "")
         .split(",")
         .filter(Boolean),
-      markdown: row.markdown as string,
+      markdown: "",
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,
       lastActivityAt: row.last_activity_at as string,
@@ -251,7 +285,7 @@ export function problemsRoutes() {
       hasSolution: Boolean(row.has_solution),
     }));
 
-    return res.json(out);
+    return res.json({ items: out, total, limit, offset });
   });
 
   r.post("/ingest", async (req, res) => {
@@ -266,7 +300,7 @@ export function problemsRoutes() {
 
     const results: Array<
       | { url: string; ok: true; problem: unknown; warnings: string[] }
-      | { url: string; ok: false; error: string }
+      | { url: string; ok: false; error: string; code: IngestFailureCode; httpStatus?: number }
     > = [];
 
     for (const url of parsed.data.urls) {
@@ -387,7 +421,8 @@ export function problemsRoutes() {
 
         results.push({ url, ok: true, problem, warnings: uniq([...ingested.warnings, ...ingestWarnings]) });
       } catch (e) {
-        results.push({ url, ok: false, error: e instanceof Error ? e.message : "unknown_error" });
+        const info = classifyIngestError(e, { url, acwingCookie });
+        results.push({ url, ok: false, error: info.detail, code: info.code, ...(info.httpStatus ? { httpStatus: info.httpStatus } : {}) });
       }
     }
 
@@ -704,9 +739,13 @@ ${rawMarkdown}
 
     const notes = d
       .prepare(
-        `SELECT * FROM notes
-         WHERE workspace_id = ? AND kind = 'problem' AND problem_id = ?
-         ORDER BY updated_at DESC`,
+        `SELECT
+           n.*,
+           COALESCE((SELECT group_concat(problem_id) FROM note_problems np2 WHERE np2.note_id = n.id), '') AS problem_ids
+         FROM notes n
+         JOIN note_problems np ON np.note_id = n.id
+         WHERE n.workspace_id = ? AND np.problem_id = ?
+         ORDER BY n.updated_at DESC`,
       )
       .all(workspaceId, problemId) as Array<Record<string, unknown>>;
 
@@ -749,7 +788,10 @@ ${rawMarkdown}
       notes: notes.map((n) => ({
         id: n.id as string,
         kind: n.kind as string,
-        problemId: (n.problem_id as string | null) ?? undefined,
+        problemIds: String((n as { problem_ids?: unknown }).problem_ids ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
         title: n.title as string,
         body: n.body as string,
         tags: parseJsonArray(n.tags_json as string),
@@ -942,27 +984,9 @@ ${rawMarkdown}
     if (!exists) return res.status(404).json({ error: "not_found" });
 
     const tx = d.transaction(() => {
-      const noteIds = d
-        .prepare("SELECT id FROM notes WHERE workspace_id = ? AND problem_id = ?")
-        .all(workspaceId, problemId) as Array<{ id: string }>;
-      const solutionIds = d
-        .prepare("SELECT id FROM solutions WHERE workspace_id = ? AND problem_id = ?")
-        .all(workspaceId, problemId) as Array<{ id: string }>;
-
-      const objectIds = [...noteIds.map((x) => x.id), ...solutionIds.map((x) => x.id)];
-
-      if (objectIds.length) {
-        const placeholders = objectIds.map(() => "?").join(",");
-        d.prepare(
-          `DELETE FROM activities
-           WHERE workspace_id = ?
-             AND (problem_id = ? OR object_id IN (${placeholders}))`,
-        ).run(workspaceId, problemId, ...objectIds);
-      } else {
-        d.prepare("DELETE FROM activities WHERE workspace_id = ? AND problem_id = ?").run(workspaceId, problemId);
-      }
-
-      d.prepare("DELETE FROM notes WHERE workspace_id = ? AND problem_id = ?").run(workspaceId, problemId);
+      // Only delete activities that belong to this problem.
+      // Notes may be linked to multiple problems; deleting by object_id would remove unrelated history.
+      d.prepare("DELETE FROM activities WHERE workspace_id = ? AND problem_id = ?").run(workspaceId, problemId);
       d.prepare("DELETE FROM problems WHERE workspace_id = ? AND id = ?").run(workspaceId, problemId);
     });
 

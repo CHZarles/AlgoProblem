@@ -1,15 +1,17 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
-import type { Note } from "../types/model";
-import { createNote, listNotes, patchNote } from "../api/client";
+import type { Note, Problem } from "../types/model";
+import { createNote, deleteNote, getNote, linkNote, listNotes, patchNote, unlinkNote } from "../api/client";
+import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
-import { Chip } from "../app/components/Chip";
 import { Input } from "../app/components/Input";
+import { Markdown } from "../app/components/Markdown";
 import { MarkdownEditor } from "../app/components/MarkdownEditor";
+import { LinkProblemDialog } from "../app/widgets/LinkProblemDialog";
 import { cn } from "../lib/cn";
-import { useApiQuery, useDebouncedCallback } from "../api/hooks";
+import { useApiQuery } from "../api/hooks";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 function parseTags(raw: string) {
@@ -21,49 +23,84 @@ function parseTags(raw: string) {
 
 const EMPTY_NOTES: Note[] = [];
 
-export default function NotesPage() {
-  const [kind, setKind] = useState<"all" | Note["kind"]>("all");
-  const [query, setQuery] = useState("");
-  const [focus, setFocus] = useState(false);
-  const q = useDebouncedValue(query.trim(), 180);
-  const qNotes = useApiQuery(() => listNotes({ q, kind }), [q, kind]);
-  const notes = qNotes.data ?? EMPTY_NOTES;
-  const [noteId, setNoteId] = useState<string | null>(notes[0]?.id ?? null);
-  const active = notes.find((n) => n.id === noteId) ?? notes[0] ?? null;
+function NoteEditor({
+  note,
+  linkedProblems,
+  onDirtyChange,
+  onReload,
+  onDeleted,
+}: {
+  note: Note;
+  linkedProblems: Array<
+    Pick<Problem, "id" | "platform" | "canonicalUrl" | "externalId" | "title" | "difficulty" | "status" | "tags">
+  >;
+  onDirtyChange: (dirty: boolean) => void;
+  onReload: () => void;
+  onDeleted: () => void;
+}) {
+  const [title, setTitle] = useState(note.title);
+  const [tagsText, setTagsText] = useState(note.tags.join(", "));
+  const [body, setBody] = useState(note.body);
+  const [baseTitle, setBaseTitle] = useState(note.title);
+  const [baseTagsText, setBaseTagsText] = useState(note.tags.join(", "));
+  const [baseBody, setBaseBody] = useState(note.body);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [linkProblemOpen, setLinkProblemOpen] = useState(false);
 
-  const createKnowledge = () => {
-    createNote({
-      kind: "knowledge",
-      title: "新知识笔记",
-      body: "## 结论\n\n## 模板\n\n```cpp\n\n```\n",
-      tags: [],
-    })
-      .then(({ id }) => {
-        toast.success("已创建知识笔记");
-        qNotes.reload();
-        setNoteId(id);
-      })
-      .catch(() => toast.error("创建失败"));
-  };
+  const dirty = useMemo(() => {
+    if (!editing) return false;
+    return title !== baseTitle || tagsText !== baseTagsText || body !== baseBody;
+  }, [baseBody, baseTagsText, baseTitle, body, editing, tagsText, title]);
 
-  const NoteEditor = ({ note }: { note: Note }) => {
-    const [title, setTitle] = useState(note.title);
-    const [tagsText, setTagsText] = useState(note.tags.join(", "));
-    const [body, setBody] = useState(note.body);
-    const debounced = useDebouncedCallback((patch: Partial<Pick<Note, "title" | "tags" | "body">>) => {
-      patchNote(note.id, patch).then(() => qNotes.reload()).catch(() => toast.error("保存失败"));
-    }, 450);
+  useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
-    return (
-      <div className="space-y-3">
+  return (
+    <div className="space-y-3">
+      {!editing ? (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold text-slate-50">{title}</div>
+            {parseTags(tagsText).length ? (
+              <div className="mt-1 truncate text-xs text-slate-500">
+                {parseTags(tagsText)
+                  .slice(0, 10)
+                  .map((t) => `#${t}`)
+                  .join(" ")}
+              </div>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+              编辑
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-rose-300 hover:bg-rose-500/10 hover:text-rose-300"
+              onClick={async () => {
+                const ok = window.confirm("确认删除该笔记？");
+                if (!ok) return;
+                try {
+                  await deleteNote(note.id);
+                  toast.success("已删除笔记");
+                  onDeleted();
+                } catch {
+                  toast.error("删除失败");
+                }
+              }}
+            >
+              删除
+            </Button>
+          </div>
+        </div>
+      ) : (
         <div className="grid grid-cols-12 gap-2">
           <div className="col-span-8">
             <Input
               value={title}
               onChange={(e) => {
-                const v = e.target.value;
-                setTitle(v);
-                debounced({ title: v });
+                setTitle(e.target.value);
               }}
             />
           </div>
@@ -71,35 +108,210 @@ export default function NotesPage() {
             <Input
               value={tagsText}
               onChange={(e) => {
-                const v = e.target.value;
-                setTagsText(v);
-                debounced({ tags: parseTags(v) });
+                setTagsText(e.target.value);
               }}
               placeholder="标签（逗号分隔）"
             />
           </div>
         </div>
+      )}
 
-        {note.problemId ? (
-          <div className="rounded-2xl bg-white/3 p-3 text-sm text-slate-300 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-            已绑定题目：{" "}
-            <Link className="text-sky-300 hover:underline" to={`/problems/${note.problemId}`}>
-              打开题目详情
-            </Link>
-          </div>
-        ) : null}
+      <div className="rounded-2xl bg-white/3 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-sm font-semibold text-slate-200">关联题目</div>
+          <Button size="sm" variant="secondary" onClick={() => setLinkProblemOpen(true)}>
+            添加关联
+          </Button>
+        </div>
+        <div className="mt-3 space-y-2">
+          {linkedProblems.length ? (
+            linkedProblems.map((p) => (
+              <div key={p.id} className="flex items-center justify-between rounded-xl bg-white/4 px-3 py-2">
+                <div className="min-w-0">
+                  <Link to={`/problems/${p.id}`} className="truncate text-sm text-slate-200 hover:underline">
+                    {p.title}
+                  </Link>
+                  <div className="mt-0.5 truncate text-xs text-slate-500">
+                    {p.platform.toUpperCase()} · {p.externalId ?? p.canonicalUrl}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="text-xs text-rose-300 hover:underline"
+                  onClick={async () => {
+                    const ok = window.confirm("确认解除关联？");
+                    if (!ok) return;
+                    try {
+                      await unlinkNote(note.id, p.id);
+                      toast.success("已解除关联");
+                      onReload();
+                    } catch {
+                      toast.error("操作失败");
+                    }
+                  }}
+                >
+                  解除
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-slate-500">未关联题目</div>
+          )}
+        </div>
+      </div>
 
+      <LinkProblemDialog
+        open={linkProblemOpen}
+        onOpenChange={setLinkProblemOpen}
+        excludeProblemIds={linkedProblems.map((p) => p.id)}
+        onLinked={async (problemId) => {
+          await linkNote(note.id, { problemId });
+          onReload();
+        }}
+      />
+
+      {editing ? (
         <MarkdownEditor
           value={body}
           onChange={(v) => {
             setBody(v);
-            debounced({ body: v });
           }}
           minHeightClass="min-h-[64vh]"
           minRows={18}
+          mode="split"
+          showModeSwitch={false}
         />
+      ) : (
+        <div className="rounded-2xl bg-white/3 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+          <Markdown value={body || "（空）"} />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-500">最近更新：{new Date(note.updatedAt).toLocaleString()}</div>
+        {editing ? (
+          <div className="flex items-center gap-2">
+            {dirty ? <Badge tone="warn">未保存</Badge> : <Badge tone="neutral">已保存</Badge>}
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={saving}
+              onClick={() => {
+                if (dirty) {
+                  const ok = window.confirm("有未保存修改，确认丢弃？");
+                  if (!ok) return;
+                }
+                setTitle(baseTitle);
+                setTagsText(baseTagsText);
+                setBody(baseBody);
+                setEditing(false);
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={!dirty || saving}
+              onClick={async () => {
+                const trimmed = title.trim();
+                if (!trimmed) return toast.error("标题不能为空");
+                setSaving(true);
+                try {
+                  await patchNote(note.id, { title: trimmed, tags: parseTags(tagsText), body });
+                  setBaseTitle(trimmed);
+                  setBaseTagsText(tagsText);
+                  setBaseBody(body);
+                  toast.success("已保存笔记");
+                  onReload();
+                  setEditing(false);
+                } catch {
+                  toast.error("保存失败");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              {saving ? "保存中…" : "保存"}
+            </Button>
+          </div>
+        ) : null}
       </div>
-    );
+    </div>
+  );
+}
+
+export default function NotesPage() {
+  const [query, setQuery] = useState("");
+  const [focus, setFocus] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const q = useDebouncedValue(query.trim(), 180);
+  const qNotes = useApiQuery(() => listNotes({ q, kind: "knowledge" }), [q]);
+  const libraryNotes = qNotes.data ?? EMPTY_NOTES;
+  const [noteId, setNoteId] = useState<string | null>(null);
+  const qActive = useApiQuery(() => (noteId ? getNote(noteId) : Promise.resolve(null)), [noteId]);
+  const activePayload = qActive.data;
+  const active = activePayload?.note ?? null;
+  const linkedProblems = activePayload?.problems ?? [];
+  const [noteDirty, setNoteDirty] = useState(false);
+
+  useEffect(() => {
+    const target = (searchParams.get("note") ?? "").trim();
+    if (!target) return;
+    if (noteId === target) return;
+    if (noteDirty) {
+      const ok = window.confirm("有未保存修改，确认丢弃？");
+      if (!ok) {
+        setSearchParams((sp) => {
+          const next = new URLSearchParams(sp);
+          if (noteId) next.set("note", noteId);
+          else next.delete("note");
+          return next;
+        });
+        return;
+      }
+      setNoteDirty(false);
+    }
+    setNoteId(target);
+  }, [noteDirty, noteId, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (noteId) return;
+    const target = (searchParams.get("note") ?? "").trim();
+    if (target) {
+      setNoteId(target);
+      return;
+    }
+    const first = libraryNotes[0]?.id ?? null;
+    if (first) {
+      setNoteId(first);
+      setSearchParams((sp) => {
+        const next = new URLSearchParams(sp);
+        next.set("note", first);
+        return next;
+      });
+    }
+  }, [libraryNotes, noteId, searchParams, setSearchParams]);
+
+  const createKnowledge = () => {
+    createNote({
+      kind: "knowledge",
+      title: "新知识笔记",
+      body: "## 结论\n\n## 模板\n\n```cpp\n\n```\n",
+      tags: [],
+      })
+      .then(({ id }) => {
+        toast.success("已创建知识笔记");
+        qNotes.reload();
+        setNoteId(id);
+        setNoteDirty(false);
+        setSearchParams((sp) => {
+          const next = new URLSearchParams(sp);
+          next.set("note", id);
+          return next;
+        });
+      })
+      .catch(() => toast.error("创建失败"));
   };
 
   return (
@@ -107,7 +319,7 @@ export default function NotesPage() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-lg font-semibold text-slate-50">笔记</div>
-          <div className="mt-1 text-sm text-slate-500">过程沉淀：踩坑、疑问、复盘卡片与知识模板。</div>
+          <div className="mt-1 text-sm text-slate-500">仅展示知识笔记（已整理）。</div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={() => setFocus((v) => !v)}>
@@ -123,14 +335,8 @@ export default function NotesPage() {
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-[420px] max-w-full">
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索笔记标题 / 标签 / 正文…" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索知识笔记标题 / 标签 / 正文…" />
         </div>
-        <Chip active={kind === "problem"} onClick={() => setKind(kind === "problem" ? "all" : "problem")}>
-          题目笔记
-        </Chip>
-        <Chip active={kind === "knowledge"} onClick={() => setKind(kind === "knowledge" ? "all" : "knowledge")}>
-          知识笔记
-        </Chip>
       </div>
 
       <div className="grid grid-cols-12 gap-4">
@@ -138,47 +344,86 @@ export default function NotesPage() {
           <div className="col-span-12 lg:col-span-3">
             <div className="rounded-2xl bg-white/3 p-2 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] lg:sticky lg:top-[72px]">
               <div className="max-h-[calc(100vh-220px)] overflow-auto">
-            {notes.length ? (
+            {(() => {
+              const list = (() => {
+                if (!active) return libraryNotes;
+                if (libraryNotes.some((n) => n.id === active.id)) return libraryNotes;
+                return [active, ...libraryNotes];
+              })();
+              return list.length ? (
               <div className="space-y-1">
-                {notes.map((n) => (
+                {list.map((n) => (
                   <button
                     key={n.id}
                     type="button"
-                    onClick={() => setNoteId(n.id)}
-                    className={cn("w-full rounded-xl px-3 py-2 text-left", n.id === active?.id ? "bg-white/8" : "hover:bg-white/6")}
+                    onClick={() => {
+                      if (n.id === noteId) return;
+                      if (noteDirty) {
+                        const ok = window.confirm("有未保存修改，确认丢弃？");
+                        if (!ok) return;
+                      }
+                      setNoteDirty(false);
+                      setNoteId(n.id);
+                      setSearchParams((sp) => {
+                        const next = new URLSearchParams(sp);
+                        next.set("note", n.id);
+                        return next;
+                      });
+                    }}
+                    className={cn("w-full rounded-xl px-3 py-2 text-left", n.id === noteId ? "bg-white/8" : "hover:bg-white/6")}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="truncate text-sm text-slate-200">{n.title}</div>
-                      <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">
-                        {n.kind === "knowledge" ? "知识" : "题目"}
-                      </span>
-                    </div>
+                    <div className="truncate text-sm text-slate-200">{n.title}</div>
                     <div className="mt-0.5 truncate text-xs text-slate-500">
                       {new Date(n.updatedAt).toLocaleString()}
-                      {n.problemId ? (
+                      {n.problemIds.length ? (
                         <>
                           {" "}
-                          · <span className="text-sky-300/80">已绑定题目</span>
+                          · <span className="text-sky-300/80">已关联 {n.problemIds.length} 题</span>
                         </>
                       ) : null}
                     </div>
                   </button>
                 ))}
               </div>
-            ) : (
-              <div className="p-3 text-sm text-slate-500">{qNotes.loading ? "加载中…" : "暂无笔记"}</div>
-            )}
+              ) : (
+                <div className="p-3 text-sm text-slate-500">{qNotes.loading ? "加载中…" : "暂无笔记"}</div>
+              );
+            })()}
               </div>
           </div>
           </div>
         ) : null}
 
         <div className={cn("col-span-12", focus ? "lg:col-span-12" : "lg:col-span-9")}>
-          {active ? (
-            <NoteEditor key={active.id} note={active} />
+          {noteId && qActive.loading ? (
+            <div className="rounded-2xl bg-white/3 p-6 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+              加载中…
+            </div>
+          ) : active ? (
+            <NoteEditor
+              key={active.id}
+              note={active}
+              linkedProblems={linkedProblems}
+              onDirtyChange={setNoteDirty}
+              onReload={() => {
+                qNotes.reload();
+                qActive.reload();
+              }}
+              onDeleted={() => {
+                setNoteDirty(false);
+                setNoteId(null);
+                qNotes.reload();
+                qActive.reload();
+                setSearchParams((sp) => {
+                  const next = new URLSearchParams(sp);
+                  next.delete("note");
+                  return next;
+                });
+              }}
+            />
           ) : (
             <div className="rounded-2xl bg-white/3 p-6 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-              选择一条笔记开始编辑
+              选择一条笔记查看
             </div>
           )}
         </div>

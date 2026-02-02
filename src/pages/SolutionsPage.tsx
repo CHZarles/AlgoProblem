@@ -1,154 +1,223 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Check, ChevronsUpDown, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Solution } from "../types/model";
 import { listSolutions, patchSolution } from "../api/client";
 import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
+import { DropdownSelect } from "../app/components/DropdownSelect";
 import { Input } from "../app/components/Input";
+import { Markdown } from "../app/components/Markdown";
 import { MarkdownEditor } from "../app/components/MarkdownEditor";
 import { cn } from "../lib/cn";
-import { useApiQuery, useDebouncedCallback } from "../api/hooks";
+import { useApiQuery } from "../api/hooks";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 const EMPTY_SOLUTIONS: Solution[] = [];
+
+const LANGUAGE_OPTIONS = [
+  { value: "all", label: "全部语言" },
+  { value: "cpp", label: "C++" },
+  { value: "java", label: "Java" },
+  { value: "python", label: "Python" },
+  { value: "go", label: "Go" },
+  { value: "ts", label: "TypeScript" },
+] satisfies Array<{ value: string; label: string }>;
+
+function SolutionEditor({
+  solution,
+  onDirtyChange,
+  onReload,
+}: {
+  solution: Solution;
+  onDirtyChange: (dirty: boolean) => void;
+  onReload: () => void;
+}) {
+  const [title, setTitle] = useState(solution.title);
+  const [lang, setLang] = useState(solution.language);
+  const [body, setBody] = useState(solution.body);
+  const [publishing, setPublishing] = useState(false);
+  const [baseTitle, setBaseTitle] = useState(solution.title);
+  const [baseLang, setBaseLang] = useState(solution.language);
+  const [baseBody, setBaseBody] = useState(solution.body);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  const dirty = useMemo(() => title !== baseTitle || lang !== baseLang || body !== baseBody, [baseBody, baseLang, baseTitle, body, lang, title]);
+
+  useEffect(() => onDirtyChange(editing ? dirty : false), [dirty, editing, onDirtyChange]);
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl bg-black/10 p-3 text-sm text-slate-300 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+        绑定题目：{" "}
+        <Link className="text-sky-300 hover:underline" to={`/problems/${solution.problemId}?tab=solutions`}>
+          打开题目详情
+        </Link>
+      </div>
+
+      {!editing ? (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold text-slate-50">{title}</div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">{lang.toUpperCase()}</span>
+              <Badge tone={solution.status === "done" ? "easy" : "neutral"}>{solution.status === "done" ? "已发布" : "草稿"}</Badge>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+              编辑
+            </Button>
+            {solution.status === "done" ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={publishing || saving}
+                onClick={() => {
+                  setPublishing(true);
+                  patchSolution(solution.id, { status: "draft" })
+                    .then(() => {
+                      toast.success("已撤回为草稿");
+                      onReload();
+                    })
+                    .catch(() => toast.error("操作失败"))
+                    .finally(() => setPublishing(false));
+                }}
+              >
+                撤回
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={publishing || saving}
+                onClick={() => {
+                  setPublishing(true);
+                  patchSolution(solution.id, { status: "done" })
+                    .then(() => {
+                      toast.success("已发布题解");
+                      onReload();
+                    })
+                    .catch(() => toast.error("发布失败"))
+                    .finally(() => setPublishing(false));
+                }}
+              >
+                发布
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-12 gap-2">
+          <div className="col-span-7">
+            <Input
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+              }}
+            />
+          </div>
+          <div className="col-span-3">
+            <DropdownSelect
+              value={lang}
+              options={LANGUAGE_OPTIONS.filter((x) => x.value !== "all")}
+              onChange={(v) => {
+                setLang(v);
+              }}
+            />
+          </div>
+          <div className="col-span-2 flex items-center justify-end">
+            <Badge tone={solution.status === "done" ? "easy" : "neutral"}>{solution.status === "done" ? "已发布" : "草稿"}</Badge>
+          </div>
+        </div>
+      )}
+
+      {editing ? (
+        <MarkdownEditor
+          value={body}
+          onChange={(v) => {
+            setBody(v);
+          }}
+          minHeightClass="min-h-[64vh]"
+          minRows={18}
+          mode="split"
+          showModeSwitch={false}
+        />
+      ) : (
+        <div className="rounded-2xl bg-white/3 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+          <Markdown value={body || "（空）"} />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-500">最近更新：{new Date(solution.updatedAt).toLocaleString()}</div>
+        {editing ? (
+          <div className="flex items-center gap-2">
+            {dirty ? <Badge tone="warn">未保存</Badge> : <Badge tone="neutral">已保存</Badge>}
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={saving || publishing}
+              onClick={() => {
+                if (dirty) {
+                  const ok = window.confirm("有未保存修改，确认丢弃？");
+                  if (!ok) return;
+                }
+                setTitle(baseTitle);
+                setLang(baseLang);
+                setBody(baseBody);
+                setEditing(false);
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={!dirty || saving || publishing}
+              onClick={async () => {
+                const trimmed = title.trim();
+                if (!trimmed) return toast.error("标题不能为空");
+                setSaving(true);
+                try {
+                  await patchSolution(solution.id, { title: trimmed, language: lang, body });
+                  setBaseTitle(trimmed);
+                  setBaseLang(lang);
+                  setBaseBody(body);
+                  toast.success("已保存题解");
+                  onReload();
+                  setEditing(false);
+                } catch {
+                  toast.error("保存失败");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              {saving ? "保存中…" : "保存"}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export default function SolutionsPage() {
   const [query, setQuery] = useState("");
   const [language, setLanguage] = useState<"all" | string>("all");
   const [focus, setFocus] = useState(false);
   const q = useDebouncedValue(query.trim(), 180);
-  const qSolutions = useApiQuery(() => listSolutions({ q, language }), [q, language]);
+  const qSolutions = useApiQuery(() => listSolutions({ q, language, status: "done" }), [q, language]);
   const solutions = qSolutions.data ?? EMPTY_SOLUTIONS;
   const [solutionId, setSolutionId] = useState<string | null>(solutions[0]?.id ?? null);
   const active = useMemo(() => solutions.find((s) => s.id === solutionId) ?? solutions[0] ?? null, [solutions, solutionId]);
-
-  const languageOptions = [
-    { v: "all", label: "全部语言" },
-    { v: "cpp", label: "C++" },
-    { v: "java", label: "Java" },
-    { v: "python", label: "Python" },
-    { v: "go", label: "Go" },
-    { v: "ts", label: "TypeScript" },
-  ] as const;
-  const currentLanguageLabel = languageOptions.find((x) => x.v === language)?.label ?? (language === "all" ? "全部语言" : language);
+  const [solutionDirty, setSolutionDirty] = useState(false);
 
   const createStandalone = () => {
     toast.message("题解必须绑定题目。请在题目详情页新建题解。");
-  };
-
-  const SolutionEditor = ({ solution }: { solution: Solution }) => {
-    const [title, setTitle] = useState(solution.title);
-    const [lang, setLang] = useState(solution.language);
-    const [status, setStatus] = useState(solution.status);
-    const [body, setBody] = useState(solution.body);
-    const [publishing, setPublishing] = useState(false);
-    const debounced = useDebouncedCallback(
-      (
-        patch: Partial<
-          Pick<Solution, "title" | "language" | "status" | "version" | "timeComplexity" | "spaceComplexity" | "body">
-        >,
-      ) => {
-        patchSolution(solution.id, patch).then(() => qSolutions.reload()).catch(() => toast.error("保存失败"));
-      },
-      450,
-    );
-
-    return (
-      <div className="space-y-3">
-        <div className="rounded-2xl bg-black/10 p-3 text-sm text-slate-300 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-          绑定题目：{" "}
-          <Link className="text-sky-300 hover:underline" to={`/problems/${solution.problemId}?tab=solutions`}>
-            打开题目详情
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-12 gap-2">
-          <div className="col-span-7">
-            <Input
-              value={title}
-              onChange={(e) => {
-                const v = e.target.value;
-                setTitle(v);
-                debounced({ title: v });
-              }}
-            />
-          </div>
-          <div className="col-span-3">
-            <select
-              value={lang}
-              onChange={(e) => {
-                const v = e.target.value;
-                setLang(v);
-                debounced({ language: v });
-              }}
-              className="h-9 w-full rounded-lg bg-white/4 px-3 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
-            >
-              <option value="cpp">C++</option>
-              <option value="java">Java</option>
-              <option value="python">Python</option>
-              <option value="go">Go</option>
-              <option value="ts">TypeScript</option>
-            </select>
-          </div>
-          <div className="col-span-2 flex items-center justify-end">
-            <Badge tone={status === "done" ? "easy" : "neutral"}>{status === "done" ? "已发布" : "草稿"}</Badge>
-          </div>
-        </div>
-
-        <MarkdownEditor
-          value={body}
-          onChange={(v) => {
-            setBody(v);
-            debounced({ body: v });
-          }}
-          minHeightClass="min-h-[64vh]"
-          minRows={18}
-        />
-
-        <div className="flex justify-end">
-          {status === "done" ? (
-            <Button
-              variant="secondary"
-              disabled={publishing}
-              onClick={() => {
-                setPublishing(true);
-                patchSolution(solution.id, { status: "draft" })
-                  .then(() => {
-                    setStatus("draft");
-                    toast.success("已撤回为草稿");
-                    qSolutions.reload();
-                  })
-                  .catch(() => toast.error("操作失败"))
-                  .finally(() => setPublishing(false));
-              }}
-            >
-              撤回为草稿
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              disabled={publishing}
-              onClick={() => {
-                setPublishing(true);
-                patchSolution(solution.id, { status: "done" })
-                  .then(() => {
-                    setStatus("done");
-                    toast.success("已发布题解");
-                    qSolutions.reload();
-                  })
-                  .catch(() => toast.error("发布失败"))
-                  .finally(() => setPublishing(false));
-              }}
-            >
-              发布
-            </Button>
-          )}
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -174,47 +243,9 @@ export default function SolutionsPage() {
         <div className="w-[420px] max-w-full">
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索题解标题 / 正文 / 代码…" />
         </div>
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button
-              type="button"
-              className={cn(
-                "flex h-9 items-center justify-between gap-2 rounded-lg px-3 text-sm",
-                "bg-white/6 text-slate-200 hover:bg-white/9",
-                "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40",
-              )}
-            >
-              <span className="truncate font-medium">{currentLanguageLabel}</span>
-              <ChevronsUpDown className="h-4 w-4 text-slate-400" />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              sideOffset={8}
-              align="start"
-              className="w-48 rounded-xl bg-[#0F1520] p-1 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel"
-            >
-              {languageOptions.map((x) => {
-                const selected = x.v === language;
-                return (
-                  <DropdownMenu.Item
-                    key={x.v}
-                    onSelect={() => setLanguage(x.v)}
-                    className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm outline-none",
-                      "text-slate-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-slate-50",
-                      selected && "bg-white/4",
-                    )}
-                  >
-                    <span className="font-medium">{x.label}</span>
-                    {selected ? <Check className="h-4 w-4 text-sky-500" /> : null}
-                  </DropdownMenu.Item>
-                );
-              })}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+        <div className="w-[180px] max-w-full">
+          <DropdownSelect value={language} options={LANGUAGE_OPTIONS} onChange={(v) => setLanguage(v)} />
+        </div>
       </div>
 
       <div className="grid grid-cols-12 gap-4">
@@ -228,7 +259,15 @@ export default function SolutionsPage() {
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => setSolutionId(s.id)}
+                    onClick={() => {
+                      if (s.id === active?.id) return;
+                      if (solutionDirty) {
+                        const ok = window.confirm("有未保存修改，确认丢弃？");
+                        if (!ok) return;
+                      }
+                      setSolutionDirty(false);
+                      setSolutionId(s.id);
+                    }}
                     className={cn(
                       "w-full rounded-xl px-3 py-2 text-left",
                       s.id === active?.id ? "bg-white/8" : "hover:bg-white/6",
@@ -242,7 +281,7 @@ export default function SolutionsPage() {
                 ))}
               </div>
             ) : (
-              <div className="p-3 text-sm text-slate-500">{qSolutions.loading ? "加载中…" : "暂无题解"}</div>
+              <div className="p-3 text-sm text-slate-500">{qSolutions.loading ? "加载中…" : "暂无已发布题解"}</div>
             )}
               </div>
           </div>
@@ -251,10 +290,10 @@ export default function SolutionsPage() {
 
         <div className={cn("col-span-12", focus ? "lg:col-span-12" : "lg:col-span-9")}>
           {active ? (
-            <SolutionEditor key={active.id} solution={active} />
+            <SolutionEditor key={active.id} solution={active} onDirtyChange={setSolutionDirty} onReload={qSolutions.reload} />
           ) : (
             <div className="rounded-2xl bg-white/3 p-6 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-              选择一份题解开始编辑
+              选择一份题解查看
             </div>
           )}
         </div>

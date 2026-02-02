@@ -5,6 +5,8 @@
   --app-bg: #0b0f14;
   --app-fg: rgb(226 232 240);
 
+  --md-divider: rgba(148, 163, 184, 0.14);
+
   --scrollbar-thumb: rgba(148, 163, 184, 0.18);
   --scrollbar-thumb-hover: rgba(148, 163, 184, 0.28);
   --scrollbar-track-border: rgba(11, 15, 20, 1);
@@ -14,6 +16,8 @@
   color-scheme: light;
   --app-bg: #f8fafc;
   --app-fg: rgb(15 23 42);
+
+  --md-divider: rgba(15, 23, 42, 0.12);
 
   --scrollbar-thumb: rgba(15, 23, 42, 0.18);
   --scrollbar-thumb-hover: rgba(15, 23, 42, 0.28);
@@ -25,6 +29,8 @@
   /* Autumn: warm paper + deeper ink, high readability */
   --app-bg: #fbf3e6;
   --app-fg: rgb(32 25 20);
+
+  --md-divider: rgba(61, 39, 23, 0.16);
 
   --scrollbar-thumb: rgba(61, 39, 23, 0.18);
   --scrollbar-thumb-hover: rgba(61, 39, 23, 0.28);
@@ -64,6 +70,172 @@ body {
 .katex-display {
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+/* Markdown (tailwind typography) */
+.prose :where(code):not(:where(pre code, [class~="not-prose"], [class~="not-prose"] *))::before,
+.prose :where(code):not(:where(pre code, [class~="not-prose"], [class~="not-prose"] *))::after {
+  content: "" !important;
+}
+
+.prose :where(code):not(:where(pre code, [class~="not-prose"], [class~="not-prose"] *)) {
+  border-radius: 0.5rem;
+  border-width: 1px;
+  border-style: solid;
+  padding: 0.12em 0.36em;
+  font-weight: 600;
+  white-space: break-spaces;
+}
+
+.prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-radius: 0.9rem;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.prose :where(h1, h2, h3, h4, h5, h6):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  scroll-margin-top: 92px;
+}
+
+.prose :where(h1):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 0;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.prose :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 1.15rem;
+  line-height: 1.25;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--md-divider);
+}
+
+.prose :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.prose :where(h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.prose :where(h5):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.prose :where(h6):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.theme-dark .prose :where(code):not(:where(pre code, [class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.18);
+  color: rgb(226 232 240);
+}
+
+.theme-light .prose :where(code):not(:where(pre code, [class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: rgba(15, 23, 42, 0.04);
+  border-color: rgba(15, 23, 42, 0.12);
+  color: rgb(15 23 42);
+}
+
+.theme-autumn .prose :where(code):not(:where(pre code, [class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: rgba(61, 39, 23, 0.06);
+  border-color: rgba(61, 39, 23, 0.16);
+  color: rgb(32 25 20);
+}
+
+.theme-dark .prose pre {
+  background-color: rgba(2, 6, 23, 0.5);
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+.prose :where(blockquote):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-style: normal;
+  border-left-width: 4px;
+  border-left-style: solid;
+  border-radius: 0.9rem;
+  padding: 0.75em 1em;
+}
+
+.prose :where(blockquote > :first-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 0;
+}
+.prose :where(blockquote > :last-child):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-bottom: 0;
+}
+
+.prose :where(blockquote p):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
+.prose :where(blockquote p):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
+  content: "" !important;
+}
+
+.theme-dark .prose blockquote {
+  background-color: rgba(148, 163, 184, 0.08);
+  border-left-color: rgba(148, 163, 184, 0.26);
+}
+.theme-light .prose blockquote {
+  background-color: rgba(15, 23, 42, 0.03);
+  border-left-color: rgba(15, 23, 42, 0.14);
+}
+.theme-autumn .prose blockquote {
+  background-color: rgba(61, 39, 23, 0.04);
+  border-left-color: rgba(61, 39, 23, 0.18);
+}
+
+.prose :where(table):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 0.9rem;
+  overflow: hidden;
+}
+
+.prose :where(th, td):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  padding: 0.5em 0.75em;
+}
+
+.theme-dark .prose table {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+.theme-light .prose table {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+.theme-autumn .prose table {
+  border: 1px solid rgba(61, 39, 23, 0.16);
+}
+
+.theme-dark .prose thead th {
+  background-color: rgba(148, 163, 184, 0.07);
+}
+.theme-light .prose thead th {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+.theme-autumn .prose thead th {
+  background-color: rgba(61, 39, 23, 0.05);
+}
+
+.theme-dark .prose tbody tr:nth-child(even) {
+  background-color: rgba(148, 163, 184, 0.04);
+}
+.theme-light .prose tbody tr:nth-child(even) {
+  background-color: rgba(15, 23, 42, 0.02);
+}
+.theme-autumn .prose tbody tr:nth-child(even) {
+  background-color: rgba(61, 39, 23, 0.03);
+}
+
+.theme-dark .prose hr {
+  border-color: rgba(148, 163, 184, 0.18);
+}
+.theme-light .prose hr {
+  border-color: rgba(15, 23, 42, 0.12);
+}
+.theme-autumn .prose hr {
+  border-color: rgba(61, 39, 23, 0.16);
 }
 
 /* Theme: light (override common Tailwind utility colors used by the app) */
@@ -177,6 +349,10 @@ body {
 }
 
 /* highlight.js: make code blocks match light-ish themes */
+.theme-dark .hljs {
+  background: transparent !important;
+}
+
 .theme-light .hljs {
   background: transparent !important;
   color: inherit;
@@ -186,6 +362,150 @@ body {
 .theme-autumn .hljs {
   background: transparent !important;
   color: inherit;
+}
+
+/* Code blocks: unify chrome + readable highlight for light/autumn */
+.theme-light .prose pre {
+  background-color: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: rgb(15 23 42);
+}
+.theme-autumn .prose pre {
+  background-color: rgba(61, 39, 23, 0.06);
+  border: 1px solid rgba(61, 39, 23, 0.16);
+  color: rgb(32 25 20);
+}
+
+.theme-light pre code.hljs,
+.theme-autumn pre code.hljs {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* highlight.js token colors (GitHub light palette) */
+.theme-light .hljs-doctag,
+.theme-light .hljs-keyword,
+.theme-light .hljs-meta .hljs-keyword,
+.theme-light .hljs-template-tag,
+.theme-light .hljs-template-variable,
+.theme-light .hljs-type,
+.theme-light .hljs-variable.language_ {
+  color: #d73a49;
+}
+.theme-light .hljs-title,
+.theme-light .hljs-title.class_,
+.theme-light .hljs-title.class_.inherited__,
+.theme-light .hljs-title.function_ {
+  color: #6f42c1;
+}
+.theme-light .hljs-attr,
+.theme-light .hljs-attribute,
+.theme-light .hljs-literal,
+.theme-light .hljs-meta,
+.theme-light .hljs-number,
+.theme-light .hljs-operator,
+.theme-light .hljs-variable,
+.theme-light .hljs-selector-attr,
+.theme-light .hljs-selector-class,
+.theme-light .hljs-selector-id {
+  color: #005cc5;
+}
+.theme-light .hljs-regexp,
+.theme-light .hljs-string,
+.theme-light .hljs-meta .hljs-string {
+  color: #032f62;
+}
+.theme-light .hljs-built_in,
+.theme-light .hljs-symbol {
+  color: #e36209;
+}
+.theme-light .hljs-comment,
+.theme-light .hljs-code,
+.theme-light .hljs-formula {
+  color: #6a737d;
+}
+.theme-light .hljs-name,
+.theme-light .hljs-quote,
+.theme-light .hljs-selector-tag,
+.theme-light .hljs-selector-pseudo {
+  color: #22863a;
+}
+.theme-light .hljs-section {
+  color: #005cc5;
+}
+.theme-light .hljs-bullet {
+  color: #735c0f;
+}
+.theme-light .hljs-addition {
+  color: #22863a;
+  background-color: #f0fff4;
+}
+.theme-light .hljs-deletion {
+  color: #b31d28;
+  background-color: #ffeef0;
+}
+
+/* highlight.js token colors (autumn: warm-tinted variant) */
+.theme-autumn .hljs-doctag,
+.theme-autumn .hljs-keyword,
+.theme-autumn .hljs-meta .hljs-keyword,
+.theme-autumn .hljs-template-tag,
+.theme-autumn .hljs-template-variable,
+.theme-autumn .hljs-type,
+.theme-autumn .hljs-variable.language_ {
+  color: #b42318;
+}
+.theme-autumn .hljs-title,
+.theme-autumn .hljs-title.class_,
+.theme-autumn .hljs-title.class_.inherited__,
+.theme-autumn .hljs-title.function_ {
+  color: #5b21b6;
+}
+.theme-autumn .hljs-attr,
+.theme-autumn .hljs-attribute,
+.theme-autumn .hljs-literal,
+.theme-autumn .hljs-meta,
+.theme-autumn .hljs-number,
+.theme-autumn .hljs-operator,
+.theme-autumn .hljs-variable,
+.theme-autumn .hljs-selector-attr,
+.theme-autumn .hljs-selector-class,
+.theme-autumn .hljs-selector-id {
+  color: #075985;
+}
+.theme-autumn .hljs-regexp,
+.theme-autumn .hljs-string,
+.theme-autumn .hljs-meta .hljs-string {
+  color: #0b4a6a;
+}
+.theme-autumn .hljs-built_in,
+.theme-autumn .hljs-symbol {
+  color: #b45309;
+}
+.theme-autumn .hljs-comment,
+.theme-autumn .hljs-code,
+.theme-autumn .hljs-formula {
+  color: #7a6a5a;
+}
+.theme-autumn .hljs-name,
+.theme-autumn .hljs-quote,
+.theme-autumn .hljs-selector-tag,
+.theme-autumn .hljs-selector-pseudo {
+  color: #1f7a3b;
+}
+.theme-autumn .hljs-section {
+  color: #075985;
+}
+.theme-autumn .hljs-bullet {
+  color: #856404;
+}
+.theme-autumn .hljs-addition {
+  color: #1f7a3b;
+  background-color: rgba(31, 122, 59, 0.08);
+}
+.theme-autumn .hljs-deletion {
+  color: #b42318;
+  background-color: rgba(180, 35, 24, 0.08);
 }
 
 /* Theme: autumn (override common Tailwind utility colors used by the app) */

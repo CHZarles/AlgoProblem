@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useLocation } from "react-router-dom";
 import { Input } from "../app/components/Input";
 import { Button } from "../app/components/Button";
 import { cn } from "../lib/cn";
-import { getSettings, patchSettings, testAcwing, testLlm } from "../api/client";
+import { exportWorkspace, getSettings, importWorkspace, patchSettings, testAcwing, testLlm } from "../api/client";
 import { useApiQuery } from "../api/hooks";
 import { ApiError } from "../api/http";
 import { useTheme, type ThemePreference } from "../app/theme";
@@ -11,6 +12,7 @@ import { Check, Leaf, Moon, Sun } from "lucide-react";
 
 export default function SettingsPage() {
   const theme = useTheme();
+  const location = useLocation();
   const q = useApiQuery(() => getSettings(), []);
   const [llmBaseUrl, setLlmBaseUrl] = useState("");
   const [llmModel, setLlmModel] = useState("");
@@ -18,12 +20,21 @@ export default function SettingsPage() {
   const [acwingCookie, setAcwingCookie] = useState("");
   const [acwingTestUrl, setAcwingTestUrl] = useState("https://www.acwing.com/problem/content/787/");
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (!q.data) return;
     setLlmBaseUrl(q.data.llmBaseUrl ?? "");
     setLlmModel(q.data.llmModel ?? "");
   }, [q.data]);
+
+  useEffect(() => {
+    const id = (location.hash || "").replace(/^#/, "");
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    window.setTimeout(() => el.scrollIntoView({ block: "start", behavior: "smooth" }), 0);
+  }, [location.hash]);
 
   const save = async () => {
     setSaving(true);
@@ -60,6 +71,7 @@ export default function SettingsPage() {
       </div>
 
       <div
+        id="acwing-cookie"
         className={cn(
           "rounded-2xl bg-white/3 p-4 shadow-panel",
           "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
@@ -357,6 +369,86 @@ export default function SettingsPage() {
           >
             清除 Cookie
           </Button>
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "rounded-2xl bg-white/3 p-4 shadow-panel",
+          "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+        )}
+      >
+        <div className="text-sm font-semibold text-slate-200">备份与迁移</div>
+        <div className="mt-1 text-sm text-slate-500">导出/导入本地 Workspace（JSON）。默认不包含 API Key / Cookie。</div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-black/10 px-3 py-2 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+          <div className="text-xs text-slate-400">
+            最后备份：{q.data?.workspaceLastBackupAt ? new Date(q.data.workspaceLastBackupAt).toLocaleString() : "—"}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              disabled={saving || importing}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  const blob = await exportWorkspace();
+                  const date = new Date().toISOString().slice(0, 10);
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `algoworkspace-${date}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                  toast.success("已导出");
+                  q.reload();
+                } catch (e) {
+                  const err = e instanceof ApiError ? e : null;
+                  toast.error(err?.message ? `导出失败：${err.message}` : "导出失败");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              导出 Workspace
+            </Button>
+
+            <label className="inline-flex">
+              <input
+                type="file"
+                accept="application/json"
+                className="hidden"
+                disabled={saving || importing}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  const ok = window.confirm("确认导入并覆盖当前 Workspace？（API Key / Cookie 不会被覆盖）");
+                  if (!ok) return;
+                  setImporting(true);
+                  try {
+                    const text = await file.text();
+                    const json = JSON.parse(text) as unknown;
+                    const out = await importWorkspace(json);
+                    toast.success(`已导入：题目 ${out.imported.problems} · 笔记 ${out.imported.notes} · 题解 ${out.imported.solutions}`);
+                    window.location.reload();
+                  } catch (e2) {
+                    const err = e2 instanceof ApiError ? e2 : null;
+                    if (err?.message === "invalid_backup_file") toast.error("导入失败：文件格式不正确");
+                    else if (err?.message === "unsupported_backup_version") toast.error("导入失败：不支持的备份版本");
+                    else toast.error("导入失败");
+                  } finally {
+                    setImporting(false);
+                  }
+                }}
+              />
+              <Button variant="primary" disabled={saving || importing}>
+                {importing ? "导入中…" : "导入（覆盖）"}
+              </Button>
+            </label>
+          </div>
         </div>
       </div>
     </div>

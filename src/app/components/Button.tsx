@@ -8,10 +8,12 @@ export function Button({
   className,
   variant = "secondary",
   size = "md",
+  type,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }) {
   return (
     <button
+      type={type ?? "button"}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/35",

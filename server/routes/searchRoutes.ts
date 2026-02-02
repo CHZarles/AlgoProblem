@@ -35,9 +35,12 @@ export function searchRoutes() {
 
     const notes = d
       .prepare(
-        `SELECT * FROM notes
-         WHERE workspace_id = ? AND (? = '' OR title LIKE ? OR body LIKE ? OR tags_json LIKE ?)
-         ORDER BY updated_at DESC
+        `SELECT
+           n.*,
+           COALESCE((SELECT group_concat(problem_id) FROM note_problems np2 WHERE np2.note_id = n.id), '') AS problem_ids
+         FROM notes n
+         WHERE n.workspace_id = ? AND (? = '' OR n.title LIKE ? OR n.body LIKE ? OR n.tags_json LIKE ?)
+         ORDER BY n.updated_at DESC
          LIMIT 6`,
       )
       .all(workspaceId, q, like, like, like) as Array<Record<string, unknown>>;
@@ -63,7 +66,10 @@ export function searchRoutes() {
       notes: notes.map((n) => ({
         id: n.id as string,
         kind: n.kind as string,
-        problemId: (n.problem_id as string | null) ?? undefined,
+        problemIds: String((n as { problem_ids?: unknown }).problem_ids ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
         title: n.title as string,
         tags: parseJsonArray(n.tags_json as string),
       })),

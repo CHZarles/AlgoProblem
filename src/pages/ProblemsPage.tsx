@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CheckCircle2, Circle, Filter, FolderPlus, MoreHorizontal, Save, Sparkles, Trash2, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -92,6 +92,8 @@ export default function ProblemsPage() {
   const [hasSolution, setHasSolution] = useState<"all" | boolean>("all");
   const [hasNotes, setHasNotes] = useState<"all" | boolean>("all");
   const [collectionId, setCollectionId] = useState<"all" | string>("all");
+  const [pageSize, setPageSize] = useState(50);
+  const [offset, setOffset] = useState(0);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
   const [addToCollectionIds, setAddToCollectionIds] = useState<string[]>([]);
@@ -100,21 +102,36 @@ export default function ProblemsPage() {
 
   const q = useDebouncedValue(query.trim(), 180);
   const tagsKey = tags.join(",");
+
+  useEffect(() => {
+    setOffset(0);
+    setSelected({});
+  }, [q, platform, difficulty, status, hasSolution, hasNotes, collectionId, tagsKey]);
+
   const qProblems = useApiQuery(
-    () => listProblems({ q, platform, difficulty, status, hasSolution, hasNotes, collectionId, tags }),
-    [q, platform, difficulty, status, hasSolution, hasNotes, collectionId, tagsKey],
+    () => listProblems({ q, platform, difficulty, status, hasSolution, hasNotes, collectionId, tags, limit: pageSize, offset }),
+    [q, platform, difficulty, status, hasSolution, hasNotes, collectionId, tagsKey, pageSize, offset],
   );
   const qCollections = useApiQuery(() => listCollections(), []);
   const qAllTags = useApiQuery(() => listProblemTags(200), []);
   const qAllPlatforms = useApiQuery(() => listProblemPlatforms(80), []);
   type ProblemRow = Problem & { hasSolution?: boolean };
-  const problems = (qProblems.data ?? []) as ProblemRow[];
+  const resp = qProblems.data;
+  const problems = (resp?.items ?? []) as ProblemRow[];
+  const total = resp?.total ?? 0;
   const collections = qCollections.data ?? [];
   const availableTags = qAllTags.data?.tags ?? [];
   const availablePlatforms = qAllPlatforms.data?.platforms ?? [];
 
   const cellPy = density.density === "compact" ? "py-2" : density.density === "comfortable" ? "py-4" : "py-3";
   const headerPy = density.density === "compact" ? "py-1.5" : density.density === "comfortable" ? "py-2.5" : "py-2";
+
+  useEffect(() => {
+    if (!total) return;
+    if (offset < total) return;
+    const lastPageOffset = Math.max(0, Math.floor((total - 1) / pageSize) * pageSize);
+    if (lastPageOffset !== offset) setOffset(lastPageOffset);
+  }, [offset, pageSize, total]);
 
   const visibleIds = new Set(problems.map((p) => p.id));
   const selectedIds = Object.entries(selected)
@@ -265,8 +282,46 @@ export default function ProblemsPage() {
 
       <div className="overflow-hidden rounded-2xl bg-white/3 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
         <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
-          <div className="text-sm font-medium text-slate-300">{problems.length} 道题</div>
-          <div className="text-xs text-slate-500">密度：{density.density === "compact" ? "紧凑" : density.density === "comfortable" ? "舒适" : "标准"}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-medium text-slate-300">{total} 道题</div>
+            <span className="text-xs text-slate-600">·</span>
+            <div className="text-xs text-slate-500">
+              {total ? `${offset + 1}-${Math.min(offset + pageSize, total)}` : "0"} / {total}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPageSize((v) => (v === 30 ? 50 : v === 50 ? 100 : 30))}
+              className={cn(
+                "h-8 rounded-lg px-2 text-[11px] font-medium",
+                "bg-white/4 text-slate-300 hover:bg-white/7",
+                "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+              )}
+              title="切换每页数量"
+            >
+              {pageSize}/页
+            </button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={qProblems.loading || offset <= 0}
+              onClick={() => setOffset((v) => Math.max(0, v - pageSize))}
+            >
+              上一页
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={qProblems.loading || offset + pageSize >= total}
+              onClick={() => setOffset((v) => v + pageSize)}
+            >
+              下一页
+            </Button>
+            <div className="text-xs text-slate-500">
+              密度：{density.density === "compact" ? "紧凑" : density.density === "comfortable" ? "舒适" : "标准"}
+            </div>
+          </div>
         </div>
 
         <div className="overflow-auto">

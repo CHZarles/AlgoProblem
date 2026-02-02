@@ -18,6 +18,8 @@ type UiIngestResult = {
   problem?: { id: string; title: string };
   warnings?: string[];
   error?: string;
+  code?: string;
+  httpStatus?: number;
 };
 
 function guessTitleFromMarkdown(markdown: string) {
@@ -53,6 +55,19 @@ function stepLabel(step: Step) {
   }
 }
 
+function failureLabel(code?: string, httpStatus?: number) {
+  if (code === "need_cookie") return { t: "需要 Cookie", tone: "warn" as const };
+  if (code === "timeout") return { t: "超时", tone: "warn" as const };
+  if (code === "anti_bot") return { t: "可能被反爬", tone: "warn" as const };
+  if (code === "empty") return { t: "解析为空", tone: "warn" as const };
+  if (code === "http_403") return { t: "403", tone: "hard" as const };
+  if (code === "http_404") return { t: "404", tone: "hard" as const };
+  if (code === "http_429") return { t: "429", tone: "hard" as const };
+  if (code === "http_other" && httpStatus) return { t: String(httpStatus), tone: "hard" as const };
+  if (code === "network") return { t: "网络错误", tone: "warn" as const };
+  return { t: "解析失败", tone: "hard" as const };
+}
+
 export function ProblemIngestDialog({
   open,
   onOpenChange,
@@ -68,6 +83,7 @@ export function ProblemIngestDialog({
   const [manualMarkdown, setManualMarkdown] = useState("");
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<UiIngestResult[]>([]);
+  const [retryingUrl, setRetryingUrl] = useState<string | null>(null);
 
   const urls = useMemo(
     () =>
@@ -103,14 +119,25 @@ export function ProblemIngestDialog({
 
       try {
         const resp = await ingestProblems(urls);
-        const all = resp.results.map((r) => ({
-          url: r.url,
-          ok: r.ok,
-          step: r.ok ? ("done" as const) : ("error" as const),
-          problem: r.problem ? { id: r.problem.id, title: r.problem.title } : undefined,
-          warnings: r.warnings ?? [],
-          error: r.error,
-        }));
+        const all = resp.results.map((r) => {
+          if (r.ok) {
+            return {
+              url: r.url,
+              ok: true as const,
+              step: "done" as const,
+              problem: r.problem ? { id: r.problem.id, title: r.problem.title } : undefined,
+              warnings: r.warnings ?? [],
+            };
+          }
+          return {
+            url: r.url,
+            ok: false as const,
+            step: "error" as const,
+            error: r.error,
+            code: r.code,
+            httpStatus: r.httpStatus,
+          };
+        });
         setResults(all);
 
         const ok = all.filter((x) => x.ok).length;
@@ -172,6 +199,63 @@ export function ProblemIngestDialog({
       toast.error("入库失败");
     } finally {
       setRunning(false);
+    }
+  };
+
+  const retryOne = async (url: string) => {
+    setRetryingUrl(url);
+    setResults((prev) =>
+      prev.map((r) =>
+        r.url === url
+          ? {
+              ...r,
+              ok: false,
+              step: "saving",
+              problem: undefined,
+              warnings: [],
+              error: undefined,
+              code: undefined,
+              httpStatus: undefined,
+            }
+          : r,
+      ),
+    );
+    try {
+      const resp = await ingestProblems([url]);
+      const one = resp.results[0];
+      if (one?.ok) {
+        const p = one.problem ? { id: one.problem.id, title: one.problem.title } : undefined;
+        setResults((prev) =>
+          prev.map((r) =>
+            r.url === url
+              ? { ...r, ok: true, step: "done", problem: p, warnings: one.warnings ?? [], error: undefined }
+              : r,
+          ),
+        );
+        toast.success("已入库");
+        if (p) navigate(`/problems/${p.id}`);
+      } else {
+        setResults((prev) =>
+          prev.map((r) =>
+            r.url === url
+              ? {
+                  ...r,
+                  ok: false,
+                  step: "error",
+                  error: (one as { error?: string }).error ?? "解析失败",
+                  code: (one as { code?: string }).code,
+                  httpStatus: (one as { httpStatus?: number }).httpStatus,
+                }
+              : r,
+          ),
+        );
+        toast.error("解析失败");
+      }
+    } catch {
+      setResults((prev) => prev.map((r) => (r.url === url ? { ...r, ok: false, step: "error", error: "解析失败" } : r)));
+      toast.error("解析失败");
+    } finally {
+      setRetryingUrl(null);
     }
   };
 
@@ -364,6 +448,8 @@ export function ProblemIngestDialog({
                   <div className="space-y-2">
                     {results.map((r) => {
                       const s = stepLabel(r.step);
+                      const f = r.step === "error" ? failureLabel(r.code, r.httpStatus) : null;
+                      const isRetrying = retryingUrl === r.url;
                       return (
                         <div key={r.url} className="rounded-xl bg-white/4 px-3 py-2">
                           <div className="flex items-start justify-between gap-3">
@@ -374,12 +460,69 @@ export function ProblemIngestDialog({
                                 <div className="truncate text-xs text-slate-500">{r.url}</div>
                               </div>
                             </div>
-                            <Badge tone={s.tone} className="shrink-0">
-                              {s.t}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              {f ? (
+                                <Badge tone={f.tone} className="shrink-0">
+                                  {f.t}
+                                </Badge>
+                              ) : null}
+                              <Badge tone={s.tone} className="shrink-0">
+                                {s.t}
+                              </Badge>
+                            </div>
                           </div>
                           {r.step === "error" ? (
-                            <div className="mt-1 text-xs text-rose-300">{r.error ?? "解析失败"}</div>
+                            <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                              <div className="min-w-0 text-xs text-rose-300">{r.error ?? "解析失败"}</div>
+                              <div className="flex items-center gap-2">
+                                {r.code === "need_cookie" ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onOpenChange(false);
+                                      navigate("/settings#acwing-cookie");
+                                    }}
+                                    className={cn(
+                                      "inline-flex h-7 items-center rounded-lg px-2 text-[11px] font-medium",
+                                      "bg-orange-500/14 text-orange-200 hover:bg-orange-500/18",
+                                      "shadow-[0_0_0_1px_rgba(249,115,22,0.20)]",
+                                    )}
+                                  >
+                                    去设置
+                                  </button>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  disabled={isRetrying}
+                                  onClick={() => void retryOne(r.url)}
+                                  className={cn(
+                                    "inline-flex h-7 items-center rounded-lg px-2 text-[11px] font-medium",
+                                    "bg-white/6 text-slate-200 hover:bg-white/9 disabled:opacity-50",
+                                    "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+                                  )}
+                                >
+                                  {isRetrying ? "重试中…" : "重试"}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isRetrying}
+                                  onClick={() => {
+                                    setMode("markdown");
+                                    setResults([]);
+                                    setManualSourceUrl(r.url);
+                                    setManualTitle("");
+                                    setManualMarkdown("");
+                                  }}
+                                  className={cn(
+                                    "inline-flex h-7 items-center rounded-lg px-2 text-[11px] font-medium",
+                                    "bg-white/6 text-slate-200 hover:bg-white/9 disabled:opacity-50",
+                                    "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+                                  )}
+                                >
+                                  手动粘贴
+                                </button>
+                              </div>
+                            </div>
                           ) : null}
                           {r.warnings?.length ? (
                             <div className="mt-1 text-xs text-amber-300">{r.warnings.join("；")}</div>

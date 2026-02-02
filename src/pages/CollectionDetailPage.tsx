@@ -58,7 +58,9 @@ export default function CollectionDetailPage() {
             hasSolution: "all",
             hasNotes: "all",
             collectionId: cid,
-          })
+            limit: 2000,
+            offset: 0,
+          }).then((r) => r.items)
         : Promise.resolve(EMPTY_PROBLEMS),
     [cid],
   );
@@ -192,7 +194,9 @@ export default function CollectionDetailPage() {
             hasSolution: "all",
             hasNotes: "all",
             collectionId: "all",
-          })
+            limit: 120,
+            offset: 0,
+          }).then((r) => r.items)
         : Promise.resolve(EMPTY_PROBLEMS),
     [addOpen, qAdd],
   );

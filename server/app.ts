@@ -9,6 +9,7 @@ import { statsRoutes } from "./routes/statsRoutes";
 import { searchRoutes } from "./routes/searchRoutes";
 import { settingsRoutes } from "./routes/settingsRoutes";
 import { reviewRoutes } from "./routes/reviewRoutes";
+import { workspaceRoutes } from "./routes/workspaceRoutes";
 import path from "node:path";
 import fs from "node:fs";
 
@@ -22,7 +23,7 @@ export function createApp() {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: "2mb" }));
+  app.use(express.json({ limit: "20mb" }));
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
@@ -34,6 +35,7 @@ export function createApp() {
   app.use("/api/review", reviewRoutes());
   app.use("/api/search", searchRoutes());
   app.use("/api/settings", settingsRoutes());
+  app.use("/api/workspace", workspaceRoutes());
 
   if (process.env.NODE_ENV === "production") {
     const distDir = path.resolve(process.cwd(), "dist");

@@ -12,6 +12,7 @@ type SettingsResponse = {
   llmApiKeyLast4?: string;
   acwingCookieSet: boolean;
   acwingCookieLast4?: string;
+  workspaceLastBackupAt?: string;
 };
 
 function normalizeBaseUrl(input: string) {
@@ -48,6 +49,10 @@ export function settingsRoutes() {
           out.acwingCookieSet = true;
           out.acwingCookieLast4 = v.length >= 4 ? v.slice(-4) : v;
         }
+      }
+      if (row.key === "workspace_last_backup_at") {
+        const v = row.value.trim();
+        if (v) out.workspaceLastBackupAt = v;
       }
     }
     return res.json(out);
