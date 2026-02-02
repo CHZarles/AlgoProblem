@@ -798,6 +798,7 @@ ${rawMarkdown}
       difficultyScore: z.coerce.number().int().min(0).max(5000).optional().nullable(),
       title: z.string().min(1).optional(),
       tags: z.array(z.string().min(1)).optional(),
+      markdown: z.string().min(1).optional(),
     });
     const body = Body.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "invalid_request" });
@@ -829,6 +830,10 @@ ${rawMarkdown}
     if (body.data.tags) {
       fields.push("tags_json = ?");
       params.push(JSON.stringify(uniq(body.data.tags)));
+    }
+    if (body.data.markdown) {
+      fields.push("markdown = ?");
+      params.push(body.data.markdown);
     }
     fields.push("updated_at = ?");
     fields.push("last_activity_at = ?");

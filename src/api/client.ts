@@ -92,7 +92,7 @@ export async function setClassicNext(problemId: string, nextProblemId: string | 
 
 export async function patchProblem(
   problemId: string,
-  patch: Partial<Pick<Problem, "platform" | "difficulty" | "title" | "tags">> & { difficultyScore?: number | null },
+  patch: Partial<Pick<Problem, "platform" | "difficulty" | "title" | "tags" | "markdown">> & { difficultyScore?: number | null },
 ) {
   return apiFetch<{ ok: true }>(`/problems/${problemId}`, { method: "PATCH", body: JSON.stringify(patch) });
 }

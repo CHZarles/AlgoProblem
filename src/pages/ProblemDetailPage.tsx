@@ -92,6 +92,14 @@ function reviewWhenLabel(reviewNextAt?: string) {
   return `已逾期 ${Math.abs(days)} 天`;
 }
 
+function splitFrontmatter(markdown: string) {
+  const md = markdown.replace(/\r\n/g, "\n");
+  if (!md.startsWith("---\n")) return { frontmatter: "", body: md };
+  const end = md.indexOf("\n---\n", 4);
+  if (end === -1) return { frontmatter: "", body: md };
+  return { frontmatter: md.slice(0, end + "\n---\n".length), body: md.slice(end + "\n---\n".length).trimStart() };
+}
+
 function ProblemMetaEditor({
   platform,
   difficulty,
@@ -449,6 +457,10 @@ export default function ProblemDetailPage() {
   const [focusNotes, setFocusNotes] = useState(false);
   const [focusSolutions, setFocusSolutions] = useState(false);
   const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
+  const [editingStatement, setEditingStatement] = useState(false);
+  const [statementDraft, setStatementDraft] = useState("");
+  const [statementFrontmatter, setStatementFrontmatter] = useState("");
+  const [savingStatement, setSavingStatement] = useState(false);
 
   const saveNoteDebounced = useDebouncedCallback(
     (noteIdArg: string, patchArg: Partial<Pick<Note, "title" | "tags" | "body">>) => {
@@ -694,7 +706,77 @@ export default function ProblemDetailPage() {
               <div className="p-3">
                 <Tabs.Content value="statement">
                   <div className="rounded-2xl bg-black/10 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-                    <Markdown value={problem.markdown} mode="statement" />
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div className="text-xs text-slate-500">题面</div>
+                      {!editingStatement ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            const { frontmatter, body } = splitFrontmatter(problem.markdown);
+                            setStatementFrontmatter(frontmatter);
+                            setStatementDraft(body);
+                            setEditingStatement(true);
+                          }}
+                        >
+                          编辑题面
+                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={savingStatement}
+                            onClick={() => {
+                              setEditingStatement(false);
+                              setStatementDraft("");
+                              setStatementFrontmatter("");
+                            }}
+                          >
+                            取消
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            disabled={savingStatement}
+                            onClick={async () => {
+                              const body = statementDraft.trim();
+                              if (!body) {
+                                toast.error("题面不能为空");
+                                return;
+                              }
+                              const full = (statementFrontmatter ? `${statementFrontmatter.trimEnd()}\n\n` : "") + body + "\n";
+                              setSavingStatement(true);
+                              try {
+                                await patchProblem(problem.id, { markdown: full });
+                                toast.success("已保存题面");
+                                setEditingStatement(false);
+                                detail.reload();
+                              } catch {
+                                toast.error("保存失败");
+                              } finally {
+                                setSavingStatement(false);
+                              }
+                            }}
+                          >
+                            {savingStatement ? "保存中…" : "保存"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {editingStatement ? (
+                      <MarkdownEditor
+                        value={statementDraft}
+                        onChange={setStatementDraft}
+                        placeholder="粘贴/编辑题面 Markdown（支持 $...$ / $$...$$）"
+                        minHeightClass="min-h-[54vh]"
+                        minRows={16}
+                        defaultMode="split"
+                      />
+                    ) : (
+                      <Markdown value={problem.markdown} mode="statement" />
+                    )}
                   </div>
                 </Tabs.Content>
 
