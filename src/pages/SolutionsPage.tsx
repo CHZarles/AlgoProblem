@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Check, ChevronsUpDown, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Solution } from "../types/model";
 import { listSolutions, patchSolution } from "../api/client";
@@ -23,6 +24,16 @@ export default function SolutionsPage() {
   const solutions = qSolutions.data ?? EMPTY_SOLUTIONS;
   const [solutionId, setSolutionId] = useState<string | null>(solutions[0]?.id ?? null);
   const active = useMemo(() => solutions.find((s) => s.id === solutionId) ?? solutions[0] ?? null, [solutions, solutionId]);
+
+  const languageOptions = [
+    { v: "all", label: "全部语言" },
+    { v: "cpp", label: "C++" },
+    { v: "java", label: "Java" },
+    { v: "python", label: "Python" },
+    { v: "go", label: "Go" },
+    { v: "ts", label: "TypeScript" },
+  ] as const;
+  const currentLanguageLabel = languageOptions.find((x) => x.v === language)?.label ?? (language === "all" ? "全部语言" : language);
 
   const createStandalone = () => {
     toast.message("题解必须绑定题目。请在题目详情页新建题解。");
@@ -163,18 +174,47 @@ export default function SolutionsPage() {
         <div className="w-[420px] max-w-full">
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索题解标题 / 正文 / 代码…" />
         </div>
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="h-9 rounded-lg bg-white/4 px-3 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
-        >
-          <option value="all">全部语言</option>
-          <option value="cpp">C++</option>
-          <option value="java">Java</option>
-          <option value="python">Python</option>
-          <option value="go">Go</option>
-          <option value="ts">TypeScript</option>
-        </select>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "flex h-9 items-center justify-between gap-2 rounded-lg px-3 text-sm",
+                "bg-white/6 text-slate-200 hover:bg-white/9",
+                "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40",
+              )}
+            >
+              <span className="truncate font-medium">{currentLanguageLabel}</span>
+              <ChevronsUpDown className="h-4 w-4 text-slate-400" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              sideOffset={8}
+              align="start"
+              className="w-48 rounded-xl bg-[#0F1520] p-1 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel"
+            >
+              {languageOptions.map((x) => {
+                const selected = x.v === language;
+                return (
+                  <DropdownMenu.Item
+                    key={x.v}
+                    onSelect={() => setLanguage(x.v)}
+                    className={cn(
+                      "flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm outline-none",
+                      "text-slate-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-slate-50",
+                      selected && "bg-white/4",
+                    )}
+                  >
+                    <span className="font-medium">{x.label}</span>
+                    {selected ? <Check className="h-4 w-4 text-sky-500" /> : null}
+                  </DropdownMenu.Item>
+                );
+              })}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
 
       <div className="grid grid-cols-12 gap-4">
