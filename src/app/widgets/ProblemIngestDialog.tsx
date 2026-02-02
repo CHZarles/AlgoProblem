@@ -2,6 +2,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { CheckCircle2, ClipboardPaste, FileText, Link2, Loader2, X, XCircle } from "lucide-react";
 import { createProblemManual, ingestProblems } from "../../api/client";
 import { cn } from "../../lib/cn";
 import { Button } from "../components/Button";
@@ -184,31 +185,54 @@ export function ProblemIngestDialog({
     setResults([]);
   };
 
+  const okCount = results.filter((r) => r.ok).length;
+  const errCount = results.filter((r) => r.step === "error").length;
+
+  const stepIcon = (step: Step) => {
+    if (step === "done") return <CheckCircle2 className="h-4 w-4 text-emerald-300" />;
+    if (step === "error") return <XCircle className="h-4 w-4 text-rose-300" />;
+    return <Loader2 className="h-4 w-4 animate-spin text-slate-400" />;
+  };
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
         <Dialog.Content
           className={cn(
-            "fixed left-1/2 top-[8%] z-50 w-[860px] -translate-x-1/2 rounded-2xl bg-[#0F1520]",
+            "fixed left-1/2 top-[8%] z-50 w-[min(980px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl bg-[#0F1520]",
             "shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel outline-none",
           )}
         >
-          <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
+          <div className="flex items-start justify-between gap-4 border-b border-white/8 px-5 py-4">
             <div>
               <div className="text-sm font-semibold text-slate-200">收集题目</div>
               <div className="mt-1 text-sm text-slate-500">
-                支持从 URL 抓取题面或手动粘贴 Markdown。LeetCode 优先结构化抓取；其他链接若已配置 LLM 则优先 LLM（失败回退通用抓取）。
+                URL 抓取 / 手动粘贴 Markdown。LeetCode / AcWing 优先结构化抓取；其他链接若已配置 LLM 则优先 LLM（失败回退通用抓取）。
               </div>
             </div>
             <Dialog.Close asChild>
-              <button className="rounded-lg px-2 py-1 text-sm text-slate-400 hover:bg-white/6">关闭</button>
+              <button
+                aria-label="关闭"
+                className={cn(
+                  "grid h-9 w-9 place-items-center rounded-xl text-slate-400",
+                  "hover:bg-white/6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/35",
+                )}
+              >
+                <X className="h-4 w-4" />
+              </button>
             </Dialog.Close>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 p-5">
-            <div>
-              <div className="mb-2 flex items-center gap-2">
+          <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
+            <div className="min-w-0">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-xl bg-black/10 p-1",
+                    "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+                  )}
+                >
                 <button
                   type="button"
                   onClick={() => {
@@ -216,11 +240,13 @@ export function ProblemIngestDialog({
                     setResults([]);
                   }}
                   className={cn(
-                    "rounded-full px-3 py-1.5 text-xs shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
-                    mode === "url" ? "bg-white/10 text-slate-50" : "bg-white/4 text-slate-300 hover:bg-white/7",
+                    "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-medium transition",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/35",
+                    mode === "url" ? "bg-white/10 text-slate-50" : "text-slate-300 hover:bg-white/6 hover:text-slate-200",
                   )}
                 >
-                  从 URL 收集
+                  <Link2 className="h-3.5 w-3.5 text-slate-400" />
+                  从 URL
                 </button>
                 <button
                   type="button"
@@ -229,17 +255,40 @@ export function ProblemIngestDialog({
                     setResults([]);
                   }}
                   className={cn(
-                    "rounded-full px-3 py-1.5 text-xs shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
-                    mode === "markdown" ? "bg-white/10 text-slate-50" : "bg-white/4 text-slate-300 hover:bg-white/7",
+                    "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-medium transition",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/35",
+                    mode === "markdown"
+                      ? "bg-white/10 text-slate-50"
+                      : "text-slate-300 hover:bg-white/6 hover:text-slate-200",
                   )}
                 >
-                  手动粘贴 Markdown
+                  <FileText className="h-3.5 w-3.5 text-slate-400" />
+                  手动 Markdown
                 </button>
+                </div>
+                {mode === "url" ? <div className="text-xs text-slate-500">{urls.length} 条</div> : null}
               </div>
 
               {mode === "url" ? (
                 <>
-                  <div className="text-xs font-medium text-slate-300">Step 1 · 粘贴 URL（支持多行）</div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium text-slate-300">Step 1 · 粘贴 URL（支持多行）</div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRaw((v) =>
+                          (v ? `${v}\n` : "") + "https://leetcode.cn/problems/two-sum/\nhttps://www.acwing.com/problem/content/2/",
+                        )
+                      }
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-slate-400",
+                        "hover:bg-white/6 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/35",
+                      )}
+                    >
+                      <ClipboardPaste className="h-3.5 w-3.5" />
+                      填充示例
+                    </button>
+                  </div>
                   <textarea
                     value={raw}
                     onChange={(e) => setRaw(e.target.value)}
@@ -247,6 +296,7 @@ export function ProblemIngestDialog({
                     rows={12}
                     className={cn(
                       "mt-2 w-full resize-none rounded-xl bg-black/10 p-3 text-sm text-slate-200",
+                      "font-mono",
                       "shadow-[0_0_0_1px_rgba(148,163,184,0.14)] placeholder:text-slate-500",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40",
                     )}
@@ -289,25 +339,44 @@ export function ProblemIngestDialog({
                 <Button variant="secondary" disabled={running} onClick={reset}>
                   清空
                 </Button>
-                {mode === "url" ? <div className="ml-auto text-xs text-slate-500">{urls.length} 条</div> : null}
+                {running ? (
+                  <div className="ml-auto inline-flex items-center gap-2 text-xs text-slate-500">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    处理中…
+                  </div>
+                ) : null}
               </div>
             </div>
 
-            <div>
-              <div className="text-xs font-medium text-slate-300">Step 2 · 抓取/生成/入库进度</div>
-              <div className="mt-2 max-h-[320px] overflow-auto rounded-xl bg-black/10 p-2 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
+            <div className="min-w-0">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-medium text-slate-300">Step 2 · 进度</div>
+                {results.length ? (
+                  <div className="text-xs text-slate-500">
+                    成功 <span className="text-emerald-300">{okCount}</span>
+                    <span className="text-slate-600"> / </span>
+                    失败 <span className="text-rose-300">{errCount}</span>
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-2 max-h-[360px] overflow-auto rounded-xl bg-black/10 p-2 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
                 {results.length ? (
                   <div className="space-y-2">
                     {results.map((r) => {
                       const s = stepLabel(r.step);
                       return (
-                        <div key={r.url} className="rounded-lg bg-white/4 px-3 py-2">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="truncate text-sm text-slate-200">{r.problem?.title ?? r.label ?? r.url}</div>
-                              <div className="truncate text-xs text-slate-500">{r.url}</div>
+                        <div key={r.url} className="rounded-xl bg-white/4 px-3 py-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-start gap-2">
+                              <div className="mt-0.5">{stepIcon(r.step)}</div>
+                              <div className="min-w-0">
+                                <div className="truncate text-sm text-slate-200">{r.problem?.title ?? r.label ?? r.url}</div>
+                                <div className="truncate text-xs text-slate-500">{r.url}</div>
+                              </div>
                             </div>
-                            <Badge tone={s.tone}>{s.t}</Badge>
+                            <Badge tone={s.tone} className="shrink-0">
+                              {s.t}
+                            </Badge>
                           </div>
                           {r.step === "error" ? (
                             <div className="mt-1 text-xs text-rose-300">{r.error ?? "解析失败"}</div>
@@ -320,7 +389,10 @@ export function ProblemIngestDialog({
                     })}
                   </div>
                 ) : (
-                  <div className="p-3 text-sm text-slate-500">等待开始…</div>
+                  <div className="p-4 text-sm text-slate-500">
+                    <div className="text-slate-400">等待开始…</div>
+                    <div className="mt-1 text-xs text-slate-500">支持批量粘贴，多条 URL 一次入库。</div>
+                  </div>
                 )}
               </div>
               <div className="mt-3 rounded-xl bg-white/3 p-3 text-xs text-slate-400 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
