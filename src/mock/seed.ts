@@ -1,68 +1,5 @@
-import type { WorkspaceDb } from "../types/model";
-
-type LeetItem = {
-  slug: string;
-  title: string;
-  difficulty: "easy" | "medium" | "hard";
-  tags: string[];
-};
-
-function makeLeetMarkdown(nowIso: string, item: LeetItem) {
-  // NOTE: Demo statements are short summaries to avoid copying third-party full statements.
-  const summaryBySlug: Record<string, string> = {
-    "two-sum": "在数组中找到两数之和等于 target 的一对下标。",
-    "add-two-numbers": "两条链表表示两个非负整数，相加后返回结果链表。",
-    "longest-substring-without-repeating-characters": "求不含重复字符的最长子串长度。",
-    "median-of-two-sorted-arrays": "两个有序数组中求整体中位数（期望对数级别）。",
-    "longest-palindromic-substring": "求给定字符串的最长回文子串。",
-    "container-with-most-water": "在两端夹逼中寻找最大容量的容器（双指针）。",
-    "3sum": "在数组中找所有和为 0 的不重复三元组。",
-    "merge-two-sorted-lists": "合并两条有序链表，得到新的有序链表。",
-    "valid-parentheses": "判断括号字符串是否有效（栈匹配）。",
-    "climbing-stairs": "经典 DP：到达第 n 阶的方案数。",
-    "best-time-to-buy-and-sell-stock": "一次交易下最大利润（维护最小买入价）。",
-    "binary-tree-level-order-traversal": "二叉树层序遍历（BFS）。",
-    "maximum-subarray": "最大子数组和（Kadane / DP）。",
-    "reverse-linked-list": "反转单链表（迭代/递归）。",
-    "word-break": "字符串能否被字典拆分（DP）。",
-    "number-of-islands": "网格连通块计数（DFS/BFS）。",
-    "merge-intervals": "区间合并（排序后线性扫描）。",
-    "lru-cache": "设计 LRU 缓存（哈希表 + 双向链表）。",
-    "trapping-rain-water": "柱状图接雨水（双指针/单调栈）。",
-    "word-ladder": "单词接龙最短路径（BFS）。",
-  };
-
-  const exampleBySlug: Record<string, string> = {
-    "two-sum": "- 输入：nums = [2,7,11,15], target = 9\n- 输出：[0,1]\n",
-    "valid-parentheses": "- 输入：s = \"()[]{}\"\n- 输出：true\n",
-    "merge-intervals": "- 输入：[[1,3],[2,6],[8,10]]\n- 输出：[[1,6],[8,10]]\n",
-    "climbing-stairs": "- 输入：n = 3\n- 输出：3\n",
-  };
-
-  const summary = summaryBySlug[item.slug] ?? "给定输入，返回满足条件的结果（Demo 摘要）。";
-  const example = exampleBySlug[item.slug] ?? "- 示例：略（Demo 摘要示例）。\n";
-
-  return `---
-source: leetcode
-title: ${item.title}
-canonical_url: https://leetcode.com/problems/${item.slug}/
-difficulty: ${item.difficulty}
-fetched_at: ${nowIso}
----
-
-# 题目摘要
-${summary}
-
-## 示例
-${example}
-
-## 标签
-${item.tags.map((t) => `- ${t}`).join("\n")}
-
-## 备注
-- 该 Demo 题面为摘要（用于展示 Markdown/LaTeX/排版能力），避免直接搬运第三方题面全文。
-`;
-}
+import type { ProblemStatus, WorkspaceDb } from "../types/model";
+import { demoLeetMarkdown, demoLeetMetaFromSlug } from "./leetDemoData";
 
 export function seedWorkspaceDb(nowIso: string): WorkspaceDb {
   const now = new Date(nowIso);
@@ -70,45 +7,52 @@ export function seedWorkspaceDb(nowIso: string): WorkspaceDb {
   const daysAgo = (n: number) => iso(new Date(now.getTime() - n * 86400000));
   const daysFromNow = (n: number) => iso(new Date(now.getTime() + n * 86400000));
 
-  const leetcodeCatalog: LeetItem[] = [
-    { slug: "two-sum", title: "Two Sum", difficulty: "easy", tags: ["array", "hash"] },
-    { slug: "add-two-numbers", title: "Add Two Numbers", difficulty: "medium", tags: ["linked-list", "math"] },
-    {
-      slug: "longest-substring-without-repeating-characters",
-      title: "Longest Substring Without Repeating Characters",
-      difficulty: "medium",
-      tags: ["sliding-window", "hash"],
-    },
-    { slug: "median-of-two-sorted-arrays", title: "Median of Two Sorted Arrays", difficulty: "hard", tags: ["binary-search"] },
-    { slug: "longest-palindromic-substring", title: "Longest Palindromic Substring", difficulty: "medium", tags: ["dp", "two-pointers"] },
-    { slug: "container-with-most-water", title: "Container With Most Water", difficulty: "medium", tags: ["two-pointers", "greedy"] },
-    { slug: "3sum", title: "3Sum", difficulty: "medium", tags: ["two-pointers", "sorting"] },
-    { slug: "merge-two-sorted-lists", title: "Merge Two Sorted Lists", difficulty: "easy", tags: ["linked-list", "two-pointers"] },
-    { slug: "valid-parentheses", title: "Valid Parentheses", difficulty: "easy", tags: ["stack"] },
-    { slug: "climbing-stairs", title: "Climbing Stairs", difficulty: "easy", tags: ["dp"] },
-    { slug: "best-time-to-buy-and-sell-stock", title: "Best Time to Buy and Sell Stock", difficulty: "easy", tags: ["dp", "greedy"] },
-    { slug: "binary-tree-level-order-traversal", title: "Binary Tree Level Order Traversal", difficulty: "medium", tags: ["tree", "bfs"] },
-    { slug: "maximum-subarray", title: "Maximum Subarray", difficulty: "medium", tags: ["dp", "greedy"] },
-    { slug: "reverse-linked-list", title: "Reverse Linked List", difficulty: "easy", tags: ["linked-list"] },
-    { slug: "word-break", title: "Word Break", difficulty: "medium", tags: ["dp"] },
-    { slug: "number-of-islands", title: "Number of Islands", difficulty: "medium", tags: ["graph", "dfs-bfs"] },
-    { slug: "merge-intervals", title: "Merge Intervals", difficulty: "medium", tags: ["sorting", "intervals"] },
-    { slug: "lru-cache", title: "LRU Cache", difficulty: "medium", tags: ["design", "hash", "linked-list"] },
-    { slug: "trapping-rain-water", title: "Trapping Rain Water", difficulty: "hard", tags: ["two-pointers", "monotonic-stack"] },
-    { slug: "word-ladder", title: "Word Ladder", difficulty: "hard", tags: ["graph", "bfs"] },
-  ];
+  const leetcodeSlugs = [
+    "two-sum",
+    "add-two-numbers",
+    "longest-substring-without-repeating-characters",
+    "median-of-two-sorted-arrays",
+    "longest-palindromic-substring",
+    "container-with-most-water",
+    "3sum",
+    "merge-two-sorted-lists",
+    "valid-parentheses",
+    "climbing-stairs",
+    "best-time-to-buy-and-sell-stock",
+    "binary-tree-level-order-traversal",
+    "maximum-subarray",
+    "reverse-linked-list",
+    "word-break",
+    "number-of-islands",
+    "merge-intervals",
+    "lru-cache",
+    "trapping-rain-water",
+    "word-ladder",
+  ] as const;
 
   const makeId = (slug: string) => `p_lc_${slug.replace(/[^a-z0-9]+/gi, "_")}`;
 
   const TOP100 = new Set([makeId("two-sum"), makeId("merge-intervals"), makeId("lru-cache")]);
   const SECOND_ROUND = new Set([makeId("two-sum"), makeId("trapping-rain-water"), makeId("word-break")]);
-  const INTERVIEW_20 = new Set(leetcodeCatalog.map((x) => makeId(x.slug)));
+  const INTERVIEW_20 = new Set(leetcodeSlugs.map((x) => makeId(x)));
 
-  const leetProblems = leetcodeCatalog.map((it, idx) => {
-    const id = makeId(it.slug);
+  const leetProblems = leetcodeSlugs.map((slug, idx) => {
+    const id = makeId(slug);
+    const meta = demoLeetMetaFromSlug(slug);
     const createdAt = daysAgo(60 - idx);
     const updatedAt = idx % 4 === 0 ? daysAgo(1) : idx % 4 === 1 ? daysAgo(3) : idx % 4 === 2 ? daysAgo(7) : daysAgo(12);
-    const status = (idx % 6 === 0 ? "reviewing" : idx % 6 === 1 ? "done" : idx % 6 === 2 ? "todo" : idx % 6 === 3 ? "done" : idx % 6 === 4 ? "reviewing" : "todo") as const;
+    const status: ProblemStatus =
+      idx % 6 === 0
+        ? "reviewing"
+        : idx % 6 === 1
+          ? "done"
+          : idx % 6 === 2
+            ? "todo"
+            : idx % 6 === 3
+              ? "done"
+              : idx % 6 === 4
+                ? "reviewing"
+                : "todo";
 
     const collections = [
       ...(TOP100.has(id) ? ["col_top100"] : []),
@@ -122,15 +66,15 @@ export function seedWorkspaceDb(nowIso: string): WorkspaceDb {
     return {
       id,
       platform: "leetcode",
-      canonicalUrl: `leetcode:${it.slug}`,
-      sourceUrl: `https://leetcode.com/problems/${it.slug}/`,
-      externalId: it.slug,
-      title: it.title,
-      difficulty: it.difficulty,
+      canonicalUrl: `leetcode:${slug}`,
+      sourceUrl: `https://leetcode.com/problems/${slug}/`,
+      externalId: slug,
+      title: meta.title,
+      difficulty: meta.difficulty,
       status,
-      tags: it.tags,
+      tags: meta.tags,
       collections,
-      markdown: makeLeetMarkdown(nowIso, it),
+      markdown: demoLeetMarkdown(nowIso, slug),
       createdAt,
       updatedAt,
       lastActivityAt: updatedAt,
@@ -185,13 +129,13 @@ N 件物品、容量 V，每件物品最多选一次，求最大价值（经典 
     {
       id: "s_twosum_cpp_first",
       problemId: makeId("two-sum"),
-      title: "哈希表一遍扫描",
+      title: "思路草稿：哈希/双指针（Demo）",
       language: "cpp",
       version: "first" as const,
       status: "done" as const,
-      timeComplexity: "O(n)",
+      timeComplexity: "O(n log n)",
       spaceComplexity: "O(n)",
-      body: `## 思路\n用哈希表记录“数值 → 下标”，遍历时检查 target - nums[i] 是否出现过。\n\n\`\`\`cpp\nvector<int> twoSum(vector<int>& nums, int target) {\n  unordered_map<int,int> pos;\n  for (int i = 0; i < (int)nums.size(); i++) {\n    int need = target - nums[i];\n    if (pos.count(need)) return {pos[need], i};\n    pos[nums[i]] = i;\n  }\n  return {};\n}\n\`\`\`\n`,
+      body: `## 结论\n这是 Demo 随机题面对应的示例题解结构（不保证可直接 AC）。\n\n## 思路\n- 先明确约束与目标函数\n- 选择合适的数据结构（哈希/栈/双指针/DP）\n- 写出不变量与边界\n\n## 代码（C++）\n\`\`\`cpp\n// TODO: implement\n\`\`\`\n`,
       createdAt: daysAgo(28),
       updatedAt: daysAgo(1),
     },
@@ -224,13 +168,13 @@ N 件物品、容量 V，每件物品最多选一次，求最大价值（经典 
     {
       id: "s_merge_intervals_cpp",
       problemId: makeId("merge-intervals"),
-      title: "排序后线性合并",
+      title: "思路草稿：排序 + 扫描（Demo）",
       language: "cpp",
       version: "first" as const,
       status: "done" as const,
       timeComplexity: "O(n log n)",
       spaceComplexity: "O(n)",
-      body: `\`\`\`cpp\nvector<vector<int>> merge(vector<vector<int>>& a) {\n  sort(a.begin(), a.end());\n  vector<vector<int>> res;\n  for (auto &it : a) {\n    if (res.empty() || res.back()[1] < it[0]) res.push_back(it);\n    else res.back()[1] = max(res.back()[1], it[1]);\n  }\n  return res;\n}\n\`\`\`\n`,
+      body: `## 思路\n- 排序后线性合并\n- 关键是边界：是否相交、是否相邻\n\n\`\`\`cpp\n// TODO: implement\n\`\`\`\n`,
       createdAt: daysAgo(19),
       updatedAt: daysAgo(2),
     },
@@ -330,4 +274,3 @@ N 件物品、容量 V，每件物品最多选一次，求最大价值（经典 
     activities,
   };
 }
-

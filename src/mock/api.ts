@@ -10,6 +10,7 @@ import type {
   Solution,
 } from "../types/model";
 import { withDb } from "./store";
+import { demoLeetMarkdown, demoLeetMetaFromSlug } from "./leetDemoData";
 
 function nowIso() {
   return new Date().toISOString();
@@ -34,136 +35,6 @@ export type IngestResult = {
   problem?: Problem;
   warning?: string[];
   error?: string;
-};
-
-const LEETCODE_CATALOG: Record<
-  string,
-  { title: string; difficulty: Difficulty; tags: string[]; summary: string; example?: string }
-> = {
-  "two-sum": {
-    title: "Two Sum",
-    difficulty: "easy",
-    tags: ["array", "hash"],
-    summary: "在数组中找到两数之和等于 target 的一对下标。",
-    example: "- 输入：nums = [2,7,11,15], target = 9\n- 输出：[0,1]\n",
-  },
-  "add-two-numbers": {
-    title: "Add Two Numbers",
-    difficulty: "medium",
-    tags: ["linked-list", "math"],
-    summary: "两条链表表示两个非负整数，相加后返回结果链表。",
-  },
-  "longest-substring-without-repeating-characters": {
-    title: "Longest Substring Without Repeating Characters",
-    difficulty: "medium",
-    tags: ["sliding-window", "hash"],
-    summary: "求不含重复字符的最长子串长度。",
-  },
-  "median-of-two-sorted-arrays": {
-    title: "Median of Two Sorted Arrays",
-    difficulty: "hard",
-    tags: ["binary-search"],
-    summary: "两个有序数组中求整体中位数（期望对数级别）。",
-  },
-  "longest-palindromic-substring": {
-    title: "Longest Palindromic Substring",
-    difficulty: "medium",
-    tags: ["dp", "two-pointers"],
-    summary: "求给定字符串的最长回文子串。",
-  },
-  "container-with-most-water": {
-    title: "Container With Most Water",
-    difficulty: "medium",
-    tags: ["two-pointers", "greedy"],
-    summary: "在两端夹逼中寻找最大容量的容器（双指针）。",
-  },
-  "3sum": {
-    title: "3Sum",
-    difficulty: "medium",
-    tags: ["two-pointers", "sorting"],
-    summary: "在数组中找所有和为 0 的不重复三元组。",
-  },
-  "merge-two-sorted-lists": {
-    title: "Merge Two Sorted Lists",
-    difficulty: "easy",
-    tags: ["linked-list", "two-pointers"],
-    summary: "合并两条有序链表，得到新的有序链表。",
-  },
-  "valid-parentheses": {
-    title: "Valid Parentheses",
-    difficulty: "easy",
-    tags: ["stack"],
-    summary: "判断括号字符串是否有效（栈匹配）。",
-    example: "- 输入：s = \"()[]{}\"\n- 输出：true\n",
-  },
-  "climbing-stairs": {
-    title: "Climbing Stairs",
-    difficulty: "easy",
-    tags: ["dp"],
-    summary: "经典 DP：到达第 n 阶的方案数。",
-    example: "- 输入：n = 3\n- 输出：3\n",
-  },
-  "best-time-to-buy-and-sell-stock": {
-    title: "Best Time to Buy and Sell Stock",
-    difficulty: "easy",
-    tags: ["dp", "greedy"],
-    summary: "一次交易下最大利润（维护最小买入价）。",
-  },
-  "binary-tree-level-order-traversal": {
-    title: "Binary Tree Level Order Traversal",
-    difficulty: "medium",
-    tags: ["tree", "bfs"],
-    summary: "二叉树层序遍历（BFS）。",
-  },
-  "maximum-subarray": {
-    title: "Maximum Subarray",
-    difficulty: "medium",
-    tags: ["dp", "greedy"],
-    summary: "最大子数组和（Kadane / DP）。",
-  },
-  "reverse-linked-list": {
-    title: "Reverse Linked List",
-    difficulty: "easy",
-    tags: ["linked-list"],
-    summary: "反转单链表（迭代/递归）。",
-  },
-  "word-break": {
-    title: "Word Break",
-    difficulty: "medium",
-    tags: ["dp"],
-    summary: "字符串能否被字典拆分（DP）。",
-  },
-  "number-of-islands": {
-    title: "Number of Islands",
-    difficulty: "medium",
-    tags: ["graph", "dfs-bfs"],
-    summary: "网格连通块计数（DFS/BFS）。",
-  },
-  "merge-intervals": {
-    title: "Merge Intervals",
-    difficulty: "medium",
-    tags: ["sorting", "intervals"],
-    summary: "区间合并（排序后线性扫描）。",
-    example: "- 输入：[[1,3],[2,6],[8,10]]\n- 输出：[[1,6],[8,10]]\n",
-  },
-  "lru-cache": {
-    title: "LRU Cache",
-    difficulty: "medium",
-    tags: ["design", "hash", "linked-list"],
-    summary: "设计 LRU 缓存（哈希表 + 双向链表）。",
-  },
-  "trapping-rain-water": {
-    title: "Trapping Rain Water",
-    difficulty: "hard",
-    tags: ["two-pointers", "monotonic-stack"],
-    summary: "柱状图接雨水（双指针/单调栈）。",
-  },
-  "word-ladder": {
-    title: "Word Ladder",
-    difficulty: "hard",
-    tags: ["graph", "bfs"],
-    summary: "单词接龙最短路径（BFS）。",
-  },
 };
 
 function parseProblemUrl(rawUrl: string): {
@@ -218,40 +89,6 @@ function parseProblemUrl(rawUrl: string): {
     canonicalUrl: `url:${host}${url.pathname}`,
     sourceUrl: rawUrl.trim(),
   };
-}
-
-function mockGeneratedMarkdown(args: {
-  platform: OJPlatform;
-  sourceUrl: string;
-  title: string;
-  difficulty: Difficulty;
-  tags?: string[];
-  summary?: string;
-  example?: string;
-}) {
-  const summary = args.summary ?? "给定输入，返回满足条件的结果（Demo 摘要）。";
-  const example = args.example ?? "- 示例：略（Demo 摘要示例）。\n";
-  const tags = args.tags?.length ? args.tags.map((t) => `- ${t}`).join("\n") : "- (none)\n";
-  return `---
-source: ${args.platform}
-canonical_url: ${args.sourceUrl}
-title: ${args.title}
-difficulty: ${args.difficulty}
-fetched_at: ${nowIso()}
----
-
-# 题目摘要
-${summary}
-
-## 示例
-${example}
-
-## 标签
-${tags}
-
-## 备注
-- Demo 题面为摘要（用于展示 Markdown/LaTeX/排版能力），避免直接搬运第三方题面全文。
-`;
 }
 
 function addActivity(type: ActivityType, payload: Omit<Activity, "id" | "type" | "at">) {
@@ -505,10 +342,10 @@ export async function ingestProblems(urls: string[], onProgress?: (r: IngestResu
       onProgress?.(base);
       await delay(450);
 
-      const leetMeta = parsed.platform === "leetcode" && parsed.externalId ? LEETCODE_CATALOG[parsed.externalId] : undefined;
+      const leetMeta = parsed.platform === "leetcode" && parsed.externalId ? demoLeetMetaFromSlug(parsed.externalId) : undefined;
       const inferredTitle =
         parsed.platform === "leetcode"
-          ? leetMeta?.title ?? parsed.externalId ?? "LeetCode Problem"
+          ? leetMeta?.title ?? parsed.externalId ?? "LeetCode Demo Problem"
           : parsed.platform === "acwing"
             ? `AcWing · #${parsed.externalId ?? "Problem"}`
             : "题目（通用链接）";
@@ -520,15 +357,10 @@ export async function ingestProblems(urls: string[], onProgress?: (r: IngestResu
             ? "unknown"
             : "unknown";
 
-      const markdown = mockGeneratedMarkdown({
-        platform: parsed.platform,
-        sourceUrl: parsed.sourceUrl,
-        title: inferredTitle,
-        difficulty: inferredDifficulty,
-        tags: leetMeta?.tags,
-        summary: leetMeta?.summary,
-        example: leetMeta?.example,
-      });
+      const markdown =
+        parsed.platform === "leetcode" && parsed.externalId
+          ? demoLeetMarkdown(nowIso(), parsed.externalId)
+          : `---\nsource: ${parsed.platform}\ncanonical_url: ${parsed.sourceUrl}\ntitle: ${inferredTitle}\ndifficulty: ${inferredDifficulty}\nfetched_at: ${nowIso()}\n---\n\n# 题目摘要\n（Mock）已从链接生成了可渲染的 Markdown 题面（Demo）。\n`;
 
       base = { ...base, step: "saving" };
       onProgress?.(base);
