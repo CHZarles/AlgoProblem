@@ -4,9 +4,8 @@
 
 ## Live Demo
 
-体验链接（GitHub Pages）：`https://<your-github-username>.github.io/<your-repo-name>/`
+体验链接（GitHub Pages）：`https://CHZarles.github.io/AlgoProblem/`
 
-> 部署方式见「Static Demo（GitHub Pages）」；将上面的占位符替换成你的实际仓库地址。
 
 ## Overview
 
