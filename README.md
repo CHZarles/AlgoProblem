@@ -2,18 +2,20 @@
 
 本地优先的算法题 Workspace：收集题面（URL → Markdown）、笔记与题解沉淀、题集计划、间隔复习、统计热力图。单体应用，无需登录。
 
-## Quick Links
+## Live Demo
 
-- Static Demo（GitHub Pages）：见下方「Static Demo」
-- 本地开发：见下方「Development」
-- 题面收集规则：见下方「Ingest Rules」
+体验链接（GitHub Pages）：`https://<your-github-username>.github.io/<your-repo-name>/`
+
+> 部署方式见「Static Demo（GitHub Pages）」；将上面的占位符替换成你的实际仓库地址。
+
+## Overview
 
 ## 适用人群
 
 - 在校算法竞赛 / 校招刷题
 - 想把「题面 / 笔记 / 题解」分维度沉淀，并支持检索/筛选/统计的人
 
-## 核心能力
+## Features
 
 - **题库（Problem Bank）**
   - URL 收集 / 手动粘贴 Markdown 入库
@@ -36,7 +38,7 @@
 - **主题**
   - 深色 / 浅色 / 秋天
 
-## Ingest Rules（题面收集规则）
+## Ingest Rules
 
 - **入库必须有 Markdown 题面**（支持 LaTeX）
 - **LeetCode / AcWing 优先结构化抓取**
@@ -46,7 +48,7 @@
   - 若已配置 LLM：优先用 LLM 抽取题面 Markdown（失败回退通用抓取）
 - 也支持 **手动粘贴 Markdown** 直接入库
 
-## Development（本地开发）
+## Development
 
 ```bash
 npm install
@@ -107,7 +109,7 @@ npm run start
 
 部分 AcWing 题目需要登录后才能抓取，设置页可填写 Cookie 用于抓取。
 
-## Data & Backup（数据与备份）
+## Data & Backup
 
 - 本项目为**单体本地 Workspace**：数据默认存储在 `.data/`（已在 `.gitignore` 排除）
 - 备份建议：直接复制 `.data/` 目录
@@ -132,4 +134,3 @@ npm run start
 ## License
 
 当前仓库未包含 License 文件；如需开源发布，建议补充明确的 License（例如 MIT / Apache-2.0）。
-
