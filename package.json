@@ -8,8 +8,10 @@
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",
+    "build:demo": "VITE_DEMO=true vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "preview:demo": "VITE_DEMO=true vite preview",
     "start": "NODE_ENV=production tsx server/index.ts"
   },
   "dependencies": {

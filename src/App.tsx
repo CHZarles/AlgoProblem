@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import WorkspaceLayout from "./app/layout/WorkspaceLayout";
 import ProblemsPage from "./pages/ProblemsPage";
@@ -51,13 +51,14 @@ function AppShell() {
 }
 
 export default function App() {
+  const Router = import.meta.env.VITE_DEMO === "true" ? HashRouter : BrowserRouter;
   return (
-    <BrowserRouter>
+    <Router>
       <ThemeProvider>
         <DensityProvider>
           <AppShell />
         </DensityProvider>
       </ThemeProvider>
-    </BrowserRouter>
+    </Router>
   );
 }

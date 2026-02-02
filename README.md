@@ -41,6 +41,26 @@ npm run build
 npm run start
 ```
 
+## Static Demo（GitHub Pages）
+
+本项目支持生成一个**可点击的静态 Demo**（无需后端），适合放到 GitHub Pages 展示。
+
+- Demo 模式使用浏览器侧 Mock API（`localStorage` 持久化，首次自动注入示例数据）
+- 路由使用 Hash（避免 GitHub Pages 刷新 404）
+
+### 本地构建/预览
+
+```bash
+npm run build:demo
+npm run preview:demo
+```
+
+### 部署到 GitHub Pages
+
+1. 推送到 `main` 或 `master`
+2. GitHub 仓库设置：**Pages → Build and deployment → Source: GitHub Actions**
+3. Workflow：`Deploy Demo to GitHub Pages` 会自动发布 `dist/`
+
 ## LLM 配置（可选）
 设置页支持配置 `Base URL / Model / API Key`，用于从“非 LeetCode 链接”抽取题面 Markdown。
 

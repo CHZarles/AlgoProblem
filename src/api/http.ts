@@ -15,7 +15,19 @@ function errorFromBody(body: unknown): string {
   return typeof v === "string" && v ? v : "api_error";
 }
 
+const IS_DEMO = import.meta.env.VITE_DEMO === "true";
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  if (IS_DEMO) {
+    const { demoApiFetch } = await import("./demoServer");
+    try {
+      return await demoApiFetch<T>({ path, init });
+    } catch (e) {
+      if (e instanceof ApiError) throw e;
+      throw new ApiError(e instanceof Error ? e.message : "api_error", 500);
+    }
+  }
+
   const resp = await fetch(path.startsWith("/api") ? path : `/api${path}`, {
     ...init,
     credentials: "include",
@@ -36,6 +48,11 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 }
 
 export async function apiFetchBlob(path: string, init?: RequestInit): Promise<Blob> {
+  if (IS_DEMO) {
+    const { demoApiFetchBlob } = await import("./demoServer");
+    return demoApiFetchBlob({ path, init });
+  }
+
   const resp = await fetch(path.startsWith("/api") ? path : `/api${path}`, {
     ...init,
     credentials: "include",
