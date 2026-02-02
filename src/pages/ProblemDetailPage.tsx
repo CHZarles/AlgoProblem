@@ -155,10 +155,10 @@ function ProblemMetaEditor({
             >
               {(
                 [
-                  { v: "unknown" as const, label: "未知", active: "bg-white/8 text-slate-200" },
-                  { v: "easy" as const, label: "简单", active: "bg-emerald-500/18 text-emerald-200" },
-                  { v: "medium" as const, label: "中等", active: "bg-amber-500/18 text-amber-200" },
-                  { v: "hard" as const, label: "困难", active: "bg-rose-500/18 text-rose-200" },
+                  { v: "unknown" as const, label: "未知", active: "bg-white/8 text-slate-50 shadow-[0_0_0_1px_rgba(148,163,184,0.16)]" },
+                  { v: "easy" as const, label: "简单", active: "bg-emerald-500/18 text-emerald-100 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]" },
+                  { v: "medium" as const, label: "中等", active: "bg-amber-500/18 text-amber-100 shadow-[0_0_0_1px_rgba(245,158,11,0.22)]" },
+                  { v: "hard" as const, label: "困难", active: "bg-rose-500/18 text-rose-100 shadow-[0_0_0_1px_rgba(244,63,94,0.22)]" },
                 ] as const
               ).map((x) => {
                 const selected = localDifficulty === x.v;
@@ -175,7 +175,7 @@ function ProblemMetaEditor({
                     className={cn(
                       "h-7 flex-1 rounded-md px-2 text-[12px] font-semibold tracking-wide transition",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/35",
-                      selected ? x.active : "text-slate-400 hover:bg-white/6 hover:text-slate-200",
+                      selected ? x.active : "text-slate-500 hover:bg-white/6 hover:text-slate-200",
                     )}
                   >
                     {x.label}
