@@ -43,6 +43,48 @@ function uniqStrings(arr: string[]) {
   return Array.from(new Set(arr.map((s) => s.trim()).filter(Boolean)));
 }
 
+const DEMO_CLASSIC_NEXT_KEY = "algoproblem.demo.classic_next.v1";
+
+function loadClassicNextMap(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(DEMO_CLASSIC_NEXT_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof k === "string" && typeof v === "string" && k.trim() && v.trim()) out[k] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function saveClassicNextMap(map: Record<string, string>) {
+  localStorage.setItem(DEMO_CLASSIC_NEXT_KEY, JSON.stringify(map));
+}
+
+function bigrams(s: string) {
+  // Lightweight title similarity helper (works for both CJK and Latin).
+  const normalized = s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\s/g, "");
+  const set = new Set<string>();
+  for (let i = 0; i + 1 < normalized.length; i++) set.add(normalized.slice(i, i + 2));
+  return set;
+}
+
+function overlapCount(a: Set<string>, b: Set<string>) {
+  const [small, large] = a.size <= b.size ? [a, b] : [b, a];
+  let count = 0;
+  for (const x of small) if (large.has(x)) count++;
+  return count;
+}
+
 function addActivity(type: Activity["type"], payload: Omit<Activity, "id" | "type" | "at">) {
   withDb((db) => {
     db.activities.unshift({
@@ -202,6 +244,82 @@ export async function demoApiFetch<T>({ path, init }: DemoRequest): Promise<T> {
       db.activities.unshift({ id: uuid("act"), type: "problem_created", at: ts, problemId: problem.id });
     });
     return { ok: true, problem, warnings: [] } as unknown as T;
+  }
+
+  const mRelated = matchPath(pathname, /^\/problems\/([^/]+)\/related$/);
+  if (method === "GET" && mRelated) {
+    const id = mRelated[0];
+    const payload = withDb((db) => {
+      const cur = db.problems.find((p) => p.id === id) ?? null;
+      if (!cur) return null;
+
+      const curTags = new Set(cur.tags.map((t) => t.toLowerCase()));
+      const curBigrams = bigrams(cur.title);
+
+      const similar = db.problems
+        .filter((p) => p.id !== id)
+        .map((p) => {
+          const tags = new Set(p.tags.map((t) => t.toLowerCase()));
+          const tagOverlap = overlapCount(curTags, tags);
+          const biOverlap = overlapCount(curBigrams, bigrams(p.title));
+          const score = tagOverlap * 10 + Math.min(12, biOverlap) * 2;
+          return { p, score };
+        })
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10)
+        .map(({ p, score }) => ({
+          id: p.id,
+          platform: p.platform,
+          canonicalUrl: p.canonicalUrl,
+          externalId: p.externalId,
+          title: p.title,
+          difficulty: p.difficulty,
+          status: p.status,
+          tags: p.tags,
+          score,
+        }));
+
+      const map = loadClassicNextMap();
+      const nextId = map[id] ?? null;
+      const prevId = Object.entries(map).find(([, to]) => to === id)?.[0] ?? null;
+      const mini = (pid: string) => {
+        const p = db.problems.find((x) => x.id === pid);
+        if (!p) return null;
+        return pick(p, ["id", "platform", "canonicalUrl", "externalId", "title", "difficulty", "status", "tags"]);
+      };
+
+      return {
+        similar,
+        classicPrev: prevId ? mini(prevId) : null,
+        classicNext: nextId ? mini(nextId) : null,
+      };
+    });
+    if (!payload) throw new ApiError("not_found", 404);
+    return payload as unknown as T;
+  }
+
+  const mClassicNext = matchPath(pathname, /^\/problems\/([^/]+)\/classic-next$/);
+  if (method === "POST" && mClassicNext) {
+    const fromId = mClassicNext[0];
+    const nextProblemId = (body as any)?.nextProblemId as unknown;
+    const toId = nextProblemId === null || nextProblemId === undefined ? null : String(nextProblemId).trim();
+
+    const exists = withDb((db) => {
+      const fromExists = Boolean(db.problems.find((p) => p.id === fromId));
+      if (!fromExists) return { ok: false as const, code: "from_not_found" as const };
+      if (toId && toId === fromId) return { ok: false as const, code: "invalid_self" as const };
+      if (toId && !db.problems.find((p) => p.id === toId)) return { ok: false as const, code: "to_not_found" as const };
+      return { ok: true as const };
+    });
+
+    if (!exists.ok) throw new ApiError("not_found", 404);
+
+    const map = loadClassicNextMap();
+    if (!toId) delete map[fromId];
+    else map[fromId] = toId;
+    saveClassicNextMap(map);
+    return { ok: true } as unknown as T;
   }
 
   const mProblem = matchPath(pathname, /^\/problems\/([^/]+)$/);
