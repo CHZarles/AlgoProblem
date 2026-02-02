@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { cn } from "../../lib/cn";
+import { applyTextareaTabIndent } from "../../lib/textareaIndent";
 import { Button } from "./Button";
 import { Markdown } from "./Markdown";
 
@@ -77,6 +78,24 @@ export function MarkdownEditor({
             <textarea
               value={value}
               onChange={(e) => onChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Tab") return;
+                e.preventDefault();
+                e.stopPropagation();
+                const el = e.currentTarget;
+                const out = applyTextareaTabIndent({
+                  value,
+                  selectionStart: el.selectionStart ?? 0,
+                  selectionEnd: el.selectionEnd ?? 0,
+                  indent: "  ",
+                  outdent: e.shiftKey,
+                });
+                onChange(out.value);
+                requestAnimationFrame(() => {
+                  el.selectionStart = out.selectionStart;
+                  el.selectionEnd = out.selectionEnd;
+                });
+              }}
               placeholder={placeholder}
               rows={rows}
               className={cn(

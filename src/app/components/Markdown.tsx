@@ -1,11 +1,14 @@
+import { isValidElement } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../theme";
-import { isValidElement } from "react";
 
 function formatCodeLanguageLabel(raw: string) {
   const lang = raw.trim().toLowerCase();
@@ -18,6 +21,36 @@ function formatCodeLanguageLabel(raw: string) {
   if (lang === "golang") return "GO";
   return lang.length <= 10 ? lang.toUpperCase() : lang.slice(0, 10).toUpperCase();
 }
+
+const SANITIZE_SCHEMA = (() => {
+  const base = defaultSchema as any;
+  const tagNames = Array.from(
+    new Set([...(base.tagNames ?? []), "sup", "sub", "kbd", "details", "summary", "input", "mark"]),
+  );
+
+  const attrs = { ...(base.attributes ?? {}) } as Record<string, unknown[]>;
+  const add = (tag: string, extra: string[]) => {
+    attrs[tag] = Array.from(new Set([...(attrs[tag] ?? []), ...extra]));
+  };
+
+  add("*", ["className", "id", "title", "aria-label", "aria-hidden"]);
+  add("a", ["target", "rel"]);
+  add("img", ["src", "alt", "title", "width", "height", "loading"]);
+  add("pre", ["className"]);
+  add("code", ["className"]);
+  add("span", ["className", "style", "aria-hidden"]);
+  add("div", ["className", "style"]);
+  add("input", ["type", "checked", "disabled"]);
+  add("details", ["open"]);
+
+  const protocols = {
+    ...(base.protocols ?? {}),
+    href: ["http", "https", "mailto"],
+    src: ["http", "https", "data"],
+  };
+
+  return { ...base, tagNames, attributes: attrs, protocols } as any;
+})();
 
 function stripFrontmatter(markdown: string) {
   const md = markdown.replace(/\r\n/g, "\n");
@@ -136,8 +169,8 @@ export function Markdown({
       )}
     >
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeHighlight]}
+        remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
+        rehypePlugins={[rehypeRaw, rehypeKatex, rehypeHighlight, [rehypeSanitize, SANITIZE_SCHEMA]]}
         components={{
           a({ href, ...props }) {
             const isExternal = typeof href === "string" && /^https?:\/\//i.test(href);

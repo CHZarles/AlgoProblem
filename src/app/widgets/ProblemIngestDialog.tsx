@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ClipboardPaste, FileText, Link2, Loader2, X, XCircle } from "lucide-react";
 import { createProblemManual, ingestProblems } from "../../api/client";
 import { cn } from "../../lib/cn";
+import { applyTextareaTabIndent } from "../../lib/textareaIndent";
 import { Button } from "../components/Button";
 import { Badge } from "../components/Badge";
 import { Input } from "../components/Input";
@@ -405,6 +406,24 @@ export function ProblemIngestDialog({
                     <textarea
                       value={manualMarkdown}
                       onChange={(e) => setManualMarkdown(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Tab") return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const el = e.currentTarget;
+                        const out = applyTextareaTabIndent({
+                          value: manualMarkdown,
+                          selectionStart: el.selectionStart ?? 0,
+                          selectionEnd: el.selectionEnd ?? 0,
+                          indent: "  ",
+                          outdent: e.shiftKey,
+                        });
+                        setManualMarkdown(out.value);
+                        requestAnimationFrame(() => {
+                          el.selectionStart = out.selectionStart;
+                          el.selectionEnd = out.selectionEnd;
+                        });
+                      }}
                       placeholder={"粘贴 Markdown 题面（支持 $...$ / $$...$$ 公式）"}
                       rows={10}
                       className={cn(

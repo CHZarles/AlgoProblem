@@ -148,6 +148,57 @@ body {
   background: transparent !important;
 }
 
+.prose :where(kbd):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-radius: 0.5rem;
+  border-width: 1px;
+  border-style: solid;
+  padding: 0.12em 0.4em;
+  font-size: 0.85em;
+  font-weight: 650;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.theme-dark .prose :where(kbd):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: rgba(148, 163, 184, 0.10);
+  border-color: rgba(148, 163, 184, 0.18);
+  color: rgb(226 232 240);
+}
+.theme-light .prose :where(kbd):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: rgba(15, 23, 42, 0.04);
+  border-color: rgba(15, 23, 42, 0.12);
+  color: rgb(15 23 42);
+}
+.theme-autumn .prose :where(kbd):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: rgba(61, 39, 23, 0.05);
+  border-color: rgba(61, 39, 23, 0.16);
+  color: rgb(32 25 20);
+}
+
+.prose :where(details):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-radius: 0.9rem;
+  border: 1px solid var(--md-divider);
+  padding: 0.75rem 1rem;
+}
+.prose :where(summary):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  cursor: pointer;
+  font-weight: 650;
+}
+.theme-dark .prose details {
+  background-color: rgba(148, 163, 184, 0.05);
+}
+.theme-light .prose details {
+  background-color: rgba(15, 23, 42, 0.03);
+}
+.theme-autumn .prose details {
+  background-color: rgba(61, 39, 23, 0.04);
+}
+
+.prose :where(input[type="checkbox"]):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-right: 0.45em;
+  accent-color: rgb(14 165 233);
+  transform: translateY(1px);
+}
+
 .prose :where(h1, h2, h3, h4, h5, h6):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
   scroll-margin-top: 92px;
 }
