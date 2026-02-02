@@ -14,14 +14,24 @@ AlgoWorkspace 是一个本地优先的刷题工作台：把「题面 / 笔记 / 
 
 ## Screenshots
 
-<p>
-  <img src="docs/shots/problem-bank.svg" width="49%" alt="Problem Bank" />
-  <img src="docs/shots/problem-detail.svg" width="49%" alt="Problem Detail" />
-</p>
-<p>
-  <img src="docs/shots/review.svg" width="49%" alt="Review Queue" />
-  <img src="docs/shots/stats.svg" width="49%" alt="Stats & Heatmap" />
-</p>
+![Problem Workflow](docs/problem-flow.svg)
+
+- ① 题库：筛选/检索/标签与状态管理，进入题目详情页
+- ② 题目详情：题面（Markdown + LaTeX）与题解编辑；仅展示“关联笔记”的元信息（不重复展示正文）
+- ③ 知识笔记：独立沉淀与管理；可关联多个题目；关联编辑在笔记页完成
+
+<details>
+  <summary>查看原始截图（problem-bank / problem-detail / problem-note）</summary>
+  <p>
+    <img src="docs/shots/problem-bank.png" width="100%" alt="Problem Bank" />
+  </p>
+  <p>
+    <img src="docs/shots/problem-detail.png" width="100%" alt="Problem Detail" />
+  </p>
+  <p>
+    <img src="docs/shots/problem-note.png" width="100%" alt="Problem Note" />
+  </p>
+</details>
 
 ## 适用人群
 
