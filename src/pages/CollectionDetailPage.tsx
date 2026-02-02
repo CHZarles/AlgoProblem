@@ -16,7 +16,9 @@ import {
 } from "../api/client";
 import { useApiQuery } from "../api/hooks";
 import { Button } from "../app/components/Button";
+import { EmptyState } from "../app/components/EmptyState";
 import { Input } from "../app/components/Input";
+import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 import { cn } from "../lib/cn";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 
@@ -217,25 +219,14 @@ export default function CollectionDetailPage() {
 
   if (!cid) return null;
 
-  if (qCollection.loading) {
-    return (
-      <div className="rounded-2xl bg-white/3 p-6 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-        加载中…
-      </div>
-    );
-  }
+  if (qCollection.loading) return <LoadingBlock title="加载中…" />;
+
+  if (qCollection.error) return <ErrorBlock error={qCollection.error} onAction={qCollection.reload} />;
 
   if (!collection) {
     return (
       <div className="space-y-4">
-        <div className="rounded-2xl bg-white/3 p-6 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-          <div className="text-sm text-slate-200">题集不存在或无权限。</div>
-          <div className="mt-4">
-            <Button variant="secondary" onClick={() => navigate("/collections")}>
-              返回集合
-            </Button>
-          </div>
-        </div>
+        <EmptyState title="题集不存在" description="可能已被删除，或当前 Workspace 中没有该题集。" actionLabel="返回集合" onAction={() => navigate("/collections")} />
       </div>
     );
   }
@@ -551,8 +542,10 @@ export default function CollectionDetailPage() {
             </div>
 
             <div className="mt-4 max-h-[460px] overflow-auto rounded-2xl bg-black/10 p-2 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-              {qAddProblems.loading ? (
-                <div className="p-3 text-sm text-slate-500">加载中…</div>
+              {qAddProblems.error ? (
+                <ErrorBlock error={qAddProblems.error} onAction={qAddProblems.reload} className="rounded-xl bg-transparent p-3 shadow-none" />
+              ) : qAddProblems.loading ? (
+                <LoadingBlock title="加载中…" className="rounded-xl bg-transparent p-3 shadow-none" />
               ) : availableCandidates.length ? (
                 <div className="divide-y divide-white/8">
                   {availableCandidates.slice(0, 100).map((p) => (
@@ -570,7 +563,7 @@ export default function CollectionDetailPage() {
                     ))}
                 </div>
               ) : (
-                <div className="p-3 text-sm text-slate-500">暂无结果</div>
+                <EmptyState title="暂无结果" className="rounded-xl bg-transparent p-3 shadow-none" />
               )}
             </div>
           </Dialog.Content>

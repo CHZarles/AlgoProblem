@@ -20,9 +20,11 @@ import {
 import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
 import { DropdownSelect } from "../app/components/DropdownSelect";
+import { EmptyState } from "../app/components/EmptyState";
 import { Input } from "../app/components/Input";
 import { Markdown } from "../app/components/Markdown";
 import { MarkdownEditor } from "../app/components/MarkdownEditor";
+import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 import { AddToCollectionDialog } from "../app/widgets/AddToCollectionDialog";
 import { cn } from "../lib/cn";
 import { useApiQuery, useDebouncedCallback } from "../api/hooks";
@@ -190,7 +192,7 @@ function ProblemMetaEditor({
                     }}
                     className={cn(
                       "h-7 flex-1 rounded-md px-2 text-[12px] font-semibold tracking-wide transition",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/35",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40",
                       selected ? x.active : "text-slate-500 hover:bg-white/6 hover:text-slate-200",
                     )}
                   >
@@ -578,25 +580,14 @@ export default function ProblemDetailPage() {
 
   if (!pid) return null;
 
-  if (detail.loading) {
-    return (
-      <div className="rounded-2xl bg-white/3 p-6 text-sm text-slate-400 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-        加载中…
-      </div>
-    );
-  }
+  if (detail.loading) return <LoadingBlock title="加载中…" />;
+
+  if (detail.error) return <ErrorBlock error={detail.error} onAction={detail.reload} />;
 
   if (!payload || !problem) {
     return (
       <div className="space-y-4">
-        <div className="rounded-2xl bg-white/3 p-6 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-          <div className="text-sm text-slate-200">题目不存在或无权限。</div>
-          <div className="mt-4">
-            <Button variant="secondary" onClick={() => navigate("/problems")}>
-              返回题库
-            </Button>
-          </div>
-        </div>
+        <EmptyState title="题目不存在" description="可能已被删除，或当前 Workspace 中没有该题目。" actionLabel="返回题库" onAction={() => navigate("/problems")} />
       </div>
     );
   }
@@ -1156,8 +1147,14 @@ export default function ProblemDetailPage() {
                 </Button>
               </div>
 
-              {qRelated.loading ? (
-                <div className="mt-3 text-sm text-slate-500">加载中…</div>
+              {qRelated.error ? (
+                <ErrorBlock
+                  error={qRelated.error}
+                  onAction={qRelated.reload}
+                  className="mt-3 rounded-none bg-transparent p-0 shadow-none"
+                />
+              ) : qRelated.loading ? (
+                <LoadingBlock title="加载中…" className="mt-3 rounded-none bg-transparent p-0 shadow-none" />
               ) : related ? (
                 <div className="mt-3 space-y-4">
                   {sourceUrls.length > 1 ? (
@@ -1262,7 +1259,7 @@ export default function ProblemDetailPage() {
                   </div>
                 </div>
               ) : (
-                <div className="mt-3 text-sm text-slate-500">加载失败</div>
+                <EmptyState title="暂无关联信息" className="mt-3 rounded-none bg-transparent p-0 shadow-none" />
               )}
             </div>
           </div>

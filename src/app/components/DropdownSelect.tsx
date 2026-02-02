@@ -31,7 +31,7 @@ export function DropdownSelect({
           type="button"
           className={cn(
             "flex h-9 w-full items-center justify-between gap-2 rounded-lg px-3 text-sm",
-            "bg-white/6 text-slate-200 hover:bg-white/9",
+            "bg-white/4 text-slate-200 hover:bg-white/6",
             "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40",
             buttonClassName,
@@ -73,4 +73,3 @@ export function DropdownSelect({
     </DropdownMenu.Root>
   );
 }
-

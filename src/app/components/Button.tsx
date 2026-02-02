@@ -16,7 +16,7 @@ export function Button({
       type={type ?? "button"}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/35",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40",
         "disabled:opacity-50 disabled:pointer-events-none",
         size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-3.5 text-sm",
         variant === "primary" &&

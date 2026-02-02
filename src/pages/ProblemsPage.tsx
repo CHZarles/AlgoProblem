@@ -22,6 +22,8 @@ import { cn } from "../lib/cn";
 import { useApiQuery } from "../api/hooks";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { useDensity } from "../app/density";
+import { EmptyState } from "../app/components/EmptyState";
+import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 
 function difficultyTone(d: Difficulty) {
   if (d === "easy") return "easy";
@@ -157,9 +159,7 @@ export default function ProblemsPage() {
 
   const bulkDelete = async () => {
     if (!selectedIds.length) return;
-    const ok = window.confirm(
-      `确认删除已选择的 ${selectedIds.length} 道题？将同时删除这些题目的题解/题目笔记/题集关联。`,
-    );
+    const ok = window.confirm(`确认删除已选择的 ${selectedIds.length} 道题？`);
     if (!ok) return;
     setBulkDeleting(true);
     try {
@@ -277,6 +277,36 @@ export default function ProblemsPage() {
           >
             已发布题解
           </Chip>
+
+          {hasSolution === false ? (
+            <Chip active onClick={() => setHasSolution("all")}>
+              未发布题解 <X className="h-4 w-4" />
+            </Chip>
+          ) : null}
+
+          {difficulty === "unknown" ? (
+            <Chip active onClick={() => setDifficulty("all")}>
+              Unknown <X className="h-4 w-4" />
+            </Chip>
+          ) : null}
+
+          {status !== "all" && status !== "todo" && status !== "done" ? (
+            <Chip active onClick={() => setStatus("all")}>
+              状态:{statusLabel(status)} <X className="h-4 w-4" />
+            </Chip>
+          ) : null}
+
+          {hasNotes !== "all" ? (
+            <Chip active onClick={() => setHasNotes("all")}>
+              笔记:{hasNotes ? "有" : "无"} <X className="h-4 w-4" />
+            </Chip>
+          ) : null}
+
+          {collectionId !== "all" ? (
+            <Chip active onClick={() => setCollectionId("all")}>
+              集合:{collections.find((c) => c.id === collectionId)?.name ?? "已选择"} <X className="h-4 w-4" />
+            </Chip>
+          ) : null}
         </div>
       </div>
 
@@ -325,182 +355,200 @@ export default function ProblemsPage() {
         </div>
 
         <div className="overflow-auto">
-          <table className="w-full min-w-[980px] table-fixed">
-            <thead className="bg-black/10 text-left text-xs text-slate-500">
-              <tr>
-                <th className={cn("w-12 px-4", headerPy)}>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.length > 0 && selectedIds.length === problems.length}
-                    onChange={(e) => toggleAll(e.target.checked)}
-                    className="h-4 w-4 accent-sky-500"
-                  />
-                </th>
-                <th className={cn("px-2", headerPy)}>标题</th>
-                <th className={cn("w-24 px-2", headerPy)}>难度</th>
-                <th className={cn("w-24 px-2", headerPy)}>状态</th>
-                <th className={cn("w-28 px-2", headerPy)}>下次复习</th>
-                <th className={cn("w-56 px-2", headerPy)}>标签</th>
-                <th className={cn("w-40 px-2", headerPy)}>最近活动</th>
-                <th className={cn("w-20 px-2", headerPy)}>题解</th>
-                <th className={cn("w-14 px-2", headerPy)}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {problems.map((p) => {
-                const checked = !!selected[p.id];
-                const hasSol = Boolean(p.hasSolution);
-                const canOpenSource = /^https?:\/\//i.test(p.sourceUrl);
-                const r = reviewMeta(p.reviewNextAt);
-                return (
-                  <tr
-                    key={p.id}
-                    className={cn(
-                      "group border-t border-white/6 text-sm text-slate-200 hover:bg-white/4",
-                      checked && "bg-sky-500/6",
-                    )}
-                  >
-                    <td className={cn("px-4", cellPy)}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => setSelected((s) => ({ ...s, [p.id]: e.target.checked }))}
-                        className="h-4 w-4 accent-sky-500"
-                      />
-                    </td>
-                    <td className={cn("px-2", cellPy)}>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Link to={`/problems/${p.id}`} className="truncate font-medium text-slate-50 hover:underline">
-                            {p.title}
-                          </Link>
-                          <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">
-                            {p.platform.toUpperCase()}
-                          </span>
+          {qProblems.error ? (
+            <div className="p-4">
+              <ErrorBlock error={qProblems.error} onAction={qProblems.reload} />
+            </div>
+          ) : qProblems.loading && !problems.length ? (
+            <div className="p-4">
+              <LoadingBlock title="加载题库…" />
+            </div>
+          ) : problems.length ? (
+            <table className="w-full min-w-[980px] table-fixed">
+              <thead className="bg-black/10 text-left text-xs text-slate-500">
+                <tr>
+                  <th className={cn("w-12 px-4", headerPy)}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length > 0 && selectedIds.length === problems.length}
+                      onChange={(e) => toggleAll(e.target.checked)}
+                      className="h-4 w-4 accent-sky-500"
+                    />
+                  </th>
+                  <th className={cn("px-2", headerPy)}>标题</th>
+                  <th className={cn("w-24 px-2", headerPy)}>难度</th>
+                  <th className={cn("w-24 px-2", headerPy)}>状态</th>
+                  <th className={cn("w-28 px-2", headerPy)}>下次复习</th>
+                  <th className={cn("w-56 px-2", headerPy)}>标签</th>
+                  <th className={cn("w-40 px-2", headerPy)}>最近活动</th>
+                  <th className={cn("w-20 px-2", headerPy)}>题解</th>
+                  <th className={cn("w-14 px-2", headerPy)}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {problems.map((p) => {
+                  const checked = !!selected[p.id];
+                  const hasSol = Boolean(p.hasSolution);
+                  const canOpenSource = /^https?:\/\//i.test(p.sourceUrl);
+                  const r = reviewMeta(p.reviewNextAt);
+                  return (
+                    <tr
+                      key={p.id}
+                      className={cn(
+                        "group border-t border-white/6 text-sm text-slate-200 hover:bg-white/4",
+                        checked && "bg-sky-500/6",
+                      )}
+                    >
+                      <td className={cn("px-4", cellPy)}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => setSelected((s) => ({ ...s, [p.id]: e.target.checked }))}
+                          className="h-4 w-4 accent-sky-500"
+                        />
+                      </td>
+                      <td className={cn("px-2", cellPy)}>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Link to={`/problems/${p.id}`} className="truncate font-medium text-slate-50 hover:underline">
+                              {p.title}
+                            </Link>
+                            <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">
+                              {p.platform.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 truncate text-xs text-slate-500">
+                            {p.externalId ?? p.canonicalUrl} ·{" "}
+                            {canOpenSource ? (
+                              <a className="hover:underline" href={p.sourceUrl} target="_blank" rel="noreferrer">
+                                打开原题
+                              </a>
+                            ) : (
+                              <span>手动录入</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="mt-0.5 truncate text-xs text-slate-500">
-                          {p.externalId ?? p.canonicalUrl} ·{" "}
-                          {canOpenSource ? (
-                            <a className="hover:underline" href={p.sourceUrl} target="_blank" rel="noreferrer">
-                              打开原题
-                            </a>
+                      </td>
+                      <td className={cn("px-2", cellPy)}>
+                        <Badge tone={difficultyTone(p.difficulty)} className="text-[12px] font-semibold tracking-wide">
+                          {difficultyLabel(p.difficulty)}
+                        </Badge>
+                      </td>
+                      <td className={cn("px-2", cellPy)}>
+                        <Badge tone={statusTone(p.status)}>{statusLabel(p.status)}</Badge>
+                      </td>
+                      <td className={cn("px-2", cellPy)}>
+                        {r ? (
+                          <div className="space-y-1">
+                            <Badge tone={r.tone}>{r.label}</Badge>
+                            <div className="text-[11px] text-slate-500">
+                              {new Date(p.reviewNextAt!).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-500">—</span>
+                        )}
+                      </td>
+                      <td className={cn("px-2", cellPy)}>
+                        <div className="flex flex-wrap gap-1.5">
+                          {p.tags.length ? (
+                            p.tags.slice(0, 4).map((t) => (
+                              <span
+                                key={t}
+                                className="rounded-full bg-white/6 px-2 py-0.5 text-[11px] text-slate-300"
+                              >
+                                {t}
+                              </span>
+                            ))
                           ) : (
-                            <span>手动录入</span>
+                            <span className="text-xs text-slate-500">未添加</span>
                           )}
                         </div>
-                      </div>
-                    </td>
-                    <td className={cn("px-2", cellPy)}>
-                      <Badge tone={difficultyTone(p.difficulty)} className="text-[12px] font-semibold tracking-wide">
-                        {difficultyLabel(p.difficulty)}
-                      </Badge>
-                    </td>
-                    <td className={cn("px-2", cellPy)}>
-                      <Badge tone={statusTone(p.status)}>{statusLabel(p.status)}</Badge>
-                    </td>
-                    <td className={cn("px-2", cellPy)}>
-                      {r ? (
-                        <div className="space-y-1">
-                          <Badge tone={r.tone}>{r.label}</Badge>
-                          <div className="text-[11px] text-slate-500">{new Date(p.reviewNextAt!).toLocaleDateString()}</div>
+                      </td>
+                      <td className={cn("px-2 text-xs text-slate-500", cellPy)}>
+                        {new Date(p.lastActivityAt).toLocaleString()}
+                      </td>
+                      <td className={cn("px-2", cellPy)}>
+                        <div className="text-slate-400">
+                          {hasSol ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
                         </div>
-                      ) : (
-                        <span className="text-xs text-slate-500">—</span>
-                      )}
-                    </td>
-                    <td className={cn("px-2", cellPy)}>
-                      <div className="flex flex-wrap gap-1.5">
-                        {p.tags.length ? (
-                          p.tags.slice(0, 4).map((t) => (
-                            <span
-                              key={t}
-                              className="rounded-full bg-white/6 px-2 py-0.5 text-[11px] text-slate-300"
-                            >
-                              {t}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-slate-500">未添加</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className={cn("px-2 text-xs text-slate-500", cellPy)}>
-                      {new Date(p.lastActivityAt).toLocaleString()}
-                    </td>
-                    <td className={cn("px-2", cellPy)}>
-                      <div className="text-slate-400">{hasSol ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}</div>
-                    </td>
-                    <td className={cn("px-2", cellPy)}>
-                      <div className="flex justify-end opacity-0 transition group-hover:opacity-100">
-                        <DropdownMenu.Root>
-                          <DropdownMenu.Trigger asChild>
-                            <button className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-white/6">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </button>
-                          </DropdownMenu.Trigger>
-                          <DropdownMenu.Portal>
-                            <DropdownMenu.Content
-                              sideOffset={8}
-                              className="w-44 rounded-xl bg-[#0F1520] p-1 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel"
-                            >
-                              <DropdownMenu.Item
-                                onSelect={() => navigate(`/problems/${p.id}`)}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6"
+                      </td>
+                      <td className={cn("px-2", cellPy)}>
+                        <div className="flex justify-end opacity-0 transition group-hover:opacity-100">
+                          <DropdownMenu.Root>
+                            <DropdownMenu.Trigger asChild>
+                              <button className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-white/6">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Portal>
+                              <DropdownMenu.Content
+                                sideOffset={8}
+                                className="w-44 rounded-xl bg-[#0F1520] p-1 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel"
                               >
-                                打开详情
-                              </DropdownMenu.Item>
-                              <DropdownMenu.Item
-                                onSelect={() => {
-                                  const next = p.status === "done" ? "todo" : "done";
-                                  setProblemStatus(p.id, next)
-                                    .then(() => {
-                                      toast.success(next === "done" ? "已标记为已做" : "已撤销已做");
-                                      qProblems.reload();
-                                    })
-                                    .catch(() => toast.error("更新失败"));
-                                }}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6"
-                              >
-                                {p.status === "done" ? "撤销已做" : "标记已做"}
-                              </DropdownMenu.Item>
-                              <DropdownMenu.Separator className="my-1 h-px bg-white/8" />
-                              <DropdownMenu.Item
-                                onSelect={(e) => {
-                                  e.preventDefault();
-                                  setAddToCollectionIds([p.id]);
-                                  setAddToCollectionOpen(true);
-                                }}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6"
-                              >
-                                加入集合
-                              </DropdownMenu.Item>
-                              <DropdownMenu.Separator className="my-1 h-px bg-white/8" />
-                              <DropdownMenu.Item
-                                onSelect={(e) => {
-                                  e.preventDefault();
-                                  const ok = window.confirm("确认删除该题目？");
-                                  if (!ok) return;
-                                  deleteProblem(p.id)
-                                    .then(() => {
-                                      toast.success("已删除题目");
-                                      qProblems.reload();
-                                    })
-                                    .catch(() => toast.error("删除失败"));
-                                }}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-sm text-rose-300 outline-none hover:bg-rose-500/10"
-                              >
-                                删除题目
-                              </DropdownMenu.Item>
-                            </DropdownMenu.Content>
-                          </DropdownMenu.Portal>
-                        </DropdownMenu.Root>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                                <DropdownMenu.Item
+                                  onSelect={() => navigate(`/problems/${p.id}`)}
+                                  className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6"
+                                >
+                                  打开详情
+                                </DropdownMenu.Item>
+                                <DropdownMenu.Item
+                                  onSelect={() => {
+                                    const next = p.status === "done" ? "todo" : "done";
+                                    setProblemStatus(p.id, next)
+                                      .then(() => {
+                                        toast.success(next === "done" ? "已标记为已做" : "已撤销已做");
+                                        qProblems.reload();
+                                      })
+                                      .catch(() => toast.error("更新失败"));
+                                  }}
+                                  className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6"
+                                >
+                                  {p.status === "done" ? "撤销已做" : "标记已做"}
+                                </DropdownMenu.Item>
+                                <DropdownMenu.Separator className="my-1 h-px bg-white/8" />
+                                <DropdownMenu.Item
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    setAddToCollectionIds([p.id]);
+                                    setAddToCollectionOpen(true);
+                                  }}
+                                  className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6"
+                                >
+                                  加入集合
+                                </DropdownMenu.Item>
+                                <DropdownMenu.Separator className="my-1 h-px bg-white/8" />
+                                <DropdownMenu.Item
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    const ok = window.confirm("确认删除该题目？");
+                                    if (!ok) return;
+                                    deleteProblem(p.id)
+                                      .then(() => {
+                                        toast.success("已删除题目");
+                                        qProblems.reload();
+                                      })
+                                      .catch(() => toast.error("删除失败"));
+                                  }}
+                                  className="cursor-pointer rounded-lg px-3 py-2 text-sm text-rose-300 outline-none hover:bg-rose-500/10"
+                                >
+                                  删除题目
+                                </DropdownMenu.Item>
+                              </DropdownMenu.Content>
+                            </DropdownMenu.Portal>
+                          </DropdownMenu.Root>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-4">
+              <EmptyState title="暂无题目" description="点击右上角「收集题目」开始。" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -511,10 +559,6 @@ export default function ProblemsPage() {
               已选择 <span className="font-semibold">{selectedIds.length}</span> 道题
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Button size="sm" variant="danger" disabled={bulkDeleting} onClick={bulkDelete}>
-                <Trash2 className="h-4 w-4" />
-                批量删除
-              </Button>
               <Button
                 size="sm"
                 variant="secondary"
@@ -527,21 +571,56 @@ export default function ProblemsPage() {
                 <FolderPlus className="h-4 w-4" />
                 加入集合
               </Button>
-              <Button size="sm" variant="secondary" disabled={bulkDeleting} onClick={() => bulkSetStatus("todo")}>
-                设为未做
-              </Button>
-              <Button size="sm" variant="secondary" disabled={bulkDeleting} onClick={() => bulkSetStatus("done")}>
-                设为已做
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={bulkDeleting}
-                onClick={() => toast.message("批量打标签（Mock）")}
-              >
-                <Sparkles className="h-4 w-4" />
-                批量标签
-              </Button>
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <Button size="sm" variant="secondary" disabled={bulkDeleting}>
+                    <MoreHorizontal className="h-4 w-4" />
+                    操作
+                  </Button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    sideOffset={8}
+                    className="w-44 rounded-xl bg-[#0F1520] p-1 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel"
+                  >
+                    <DropdownMenu.Item
+                      disabled={bulkDeleting}
+                      onSelect={() => bulkSetStatus("todo")}
+                      className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                    >
+                      设为未做
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      disabled={bulkDeleting}
+                      onSelect={() => bulkSetStatus("done")}
+                      className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                    >
+                      设为已做
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      disabled={bulkDeleting}
+                      onSelect={() => toast.message("批量打标签（Mock）")}
+                      className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/6 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        批量标签
+                      </div>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Separator className="my-1 h-px bg-white/8" />
+                    <DropdownMenu.Item
+                      disabled={bulkDeleting}
+                      onSelect={() => bulkDelete()}
+                      className="cursor-pointer rounded-lg px-3 py-2 text-sm text-rose-300 outline-none hover:bg-rose-500/10 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="h-4 w-4" />
+                        批量删除
+                      </div>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
               <Button size="sm" variant="ghost" disabled={bulkDeleting} onClick={() => setSelected({})}>
                 取消
               </Button>

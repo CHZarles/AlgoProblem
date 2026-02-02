@@ -8,7 +8,9 @@ import type { Collection } from "../types/model";
 import { createCollection, deleteCollection, listCollections, patchCollection } from "../api/client";
 import { useApiQuery } from "../api/hooks";
 import { Button } from "../app/components/Button";
+import { EmptyState } from "../app/components/EmptyState";
 import { Input } from "../app/components/Input";
+import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 import { cn } from "../lib/cn";
 
 const EMPTY_COLLECTIONS: Collection[] = [];
@@ -103,7 +105,15 @@ export default function CollectionsPage() {
       </div>
 
       <div className="grid grid-cols-12 gap-4">
-        {collections.length ? (
+        {qCollections.error ? (
+          <div className="col-span-12">
+            <ErrorBlock error={qCollections.error} onAction={qCollections.reload} />
+          </div>
+        ) : qCollections.loading && !collections.length ? (
+          <div className="col-span-12">
+            <LoadingBlock title="加载集合…" />
+          </div>
+        ) : collections.length ? (
           collections.map((c) => (
             <div
               key={c.id}
@@ -180,8 +190,8 @@ export default function CollectionsPage() {
             </div>
           ))
         ) : (
-          <div className="col-span-12 rounded-2xl bg-white/3 p-6 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-            {qCollections.loading ? "加载中…" : "暂无集合，点击右上角「新建集合」开始。"}
+          <div className="col-span-12">
+            <EmptyState title="暂无集合" description="点击右上角「新建集合」开始。" />
           </div>
         )}
       </div>

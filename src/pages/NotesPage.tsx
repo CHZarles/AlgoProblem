@@ -6,9 +6,12 @@ import type { Note, Problem } from "../types/model";
 import { createNote, deleteNote, getNote, linkNote, listNotes, patchNote, unlinkNote } from "../api/client";
 import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
+import { EmptyState } from "../app/components/EmptyState";
 import { Input } from "../app/components/Input";
+import { ListRowButton } from "../app/components/ListRowButton";
 import { Markdown } from "../app/components/Markdown";
 import { MarkdownEditor } from "../app/components/MarkdownEditor";
+import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 import { LinkProblemDialog } from "../app/widgets/LinkProblemDialog";
 import { cn } from "../lib/cn";
 import { useApiQuery } from "../api/hooks";
@@ -255,6 +258,12 @@ export default function NotesPage() {
   const linkedProblems = activePayload?.problems ?? [];
   const [noteDirty, setNoteDirty] = useState(false);
 
+  const list = useMemo(() => {
+    if (!active) return libraryNotes;
+    if (libraryNotes.some((n) => n.id === active.id)) return libraryNotes;
+    return [active, ...libraryNotes];
+  }, [active, libraryNotes]);
+
   useEffect(() => {
     const target = (searchParams.get("note") ?? "").trim();
     if (!target) return;
@@ -344,51 +353,47 @@ export default function NotesPage() {
           <div className="col-span-12 lg:col-span-3">
             <div className="rounded-2xl bg-white/3 p-2 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] lg:sticky lg:top-[72px]">
               <div className="max-h-[calc(100vh-220px)] overflow-auto">
-            {(() => {
-              const list = (() => {
-                if (!active) return libraryNotes;
-                if (libraryNotes.some((n) => n.id === active.id)) return libraryNotes;
-                return [active, ...libraryNotes];
-              })();
-              return list.length ? (
-              <div className="space-y-1">
-                {list.map((n) => (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => {
-                      if (n.id === noteId) return;
-                      if (noteDirty) {
-                        const ok = window.confirm("有未保存修改，确认丢弃？");
-                        if (!ok) return;
-                      }
-                      setNoteDirty(false);
-                      setNoteId(n.id);
-                      setSearchParams((sp) => {
-                        const next = new URLSearchParams(sp);
-                        next.set("note", n.id);
-                        return next;
-                      });
-                    }}
-                    className={cn("w-full rounded-xl px-3 py-2 text-left", n.id === noteId ? "bg-white/8" : "hover:bg-white/6")}
-                  >
-                    <div className="truncate text-sm text-slate-200">{n.title}</div>
-                    <div className="mt-0.5 truncate text-xs text-slate-500">
-                      {new Date(n.updatedAt).toLocaleString()}
-                      {n.problemIds.length ? (
-                        <>
-                          {" "}
-                          · <span className="text-sky-300/80">已关联 {n.problemIds.length} 题</span>
-                        </>
-                      ) : null}
-                    </div>
-                  </button>
-                ))}
-              </div>
-              ) : (
-                <div className="p-3 text-sm text-slate-500">{qNotes.loading ? "加载中…" : "暂无笔记"}</div>
-              );
-            })()}
+                {qNotes.error ? (
+                  <ErrorBlock error={qNotes.error} onAction={qNotes.reload} className="bg-transparent p-3 shadow-none" />
+                ) : qNotes.loading && !list.length ? (
+                  <LoadingBlock title="加载中…" className="bg-transparent p-3 shadow-none" />
+                ) : list.length ? (
+                  <div className="space-y-1">
+                    {list.map((n) => (
+                      <ListRowButton
+                        key={n.id}
+                        active={n.id === noteId}
+                        onClick={() => {
+                          if (n.id === noteId) return;
+                          if (noteDirty) {
+                            const ok = window.confirm("有未保存修改，确认丢弃？");
+                            if (!ok) return;
+                          }
+                          setNoteDirty(false);
+                          setNoteId(n.id);
+                          setSearchParams((sp) => {
+                            const next = new URLSearchParams(sp);
+                            next.set("note", n.id);
+                            return next;
+                          });
+                        }}
+                      >
+                        <div className="truncate text-sm text-slate-200">{n.title}</div>
+                        <div className="mt-0.5 truncate text-xs text-slate-500">
+                          {new Date(n.updatedAt).toLocaleString()}
+                          {n.problemIds.length ? (
+                            <>
+                              {" "}
+                              · <span className="text-sky-300/80">已关联 {n.problemIds.length} 题</span>
+                            </>
+                          ) : null}
+                        </div>
+                      </ListRowButton>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState title="暂无笔记" className="bg-transparent p-3 shadow-none" />
+                )}
               </div>
           </div>
           </div>
@@ -396,9 +401,9 @@ export default function NotesPage() {
 
         <div className={cn("col-span-12", focus ? "lg:col-span-12" : "lg:col-span-9")}>
           {noteId && qActive.loading ? (
-            <div className="rounded-2xl bg-white/3 p-6 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-              加载中…
-            </div>
+            <LoadingBlock title="加载中…" />
+          ) : qActive.error ? (
+            <ErrorBlock error={qActive.error} onAction={qActive.reload} />
           ) : active ? (
             <NoteEditor
               key={active.id}
@@ -422,9 +427,7 @@ export default function NotesPage() {
               }}
             />
           ) : (
-            <div className="rounded-2xl bg-white/3 p-6 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-              选择一条笔记查看
-            </div>
+            <EmptyState title="选择一条笔记查看" description="笔记编辑与关联题目都在这里完成。" />
           )}
         </div>
       </div>

@@ -7,9 +7,12 @@ import { listSolutions, patchSolution } from "../api/client";
 import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
 import { DropdownSelect } from "../app/components/DropdownSelect";
+import { EmptyState } from "../app/components/EmptyState";
 import { Input } from "../app/components/Input";
+import { ListRowButton } from "../app/components/ListRowButton";
 import { Markdown } from "../app/components/Markdown";
 import { MarkdownEditor } from "../app/components/MarkdownEditor";
+import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 import { cn } from "../lib/cn";
 import { useApiQuery } from "../api/hooks";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
@@ -253,36 +256,36 @@ export default function SolutionsPage() {
           <div className="col-span-12 lg:col-span-3">
             <div className="rounded-2xl bg-white/3 p-2 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] lg:sticky lg:top-[72px]">
               <div className="max-h-[calc(100vh-220px)] overflow-auto">
-            {solutions.length ? (
-              <div className="space-y-1">
-                {solutions.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => {
-                      if (s.id === active?.id) return;
-                      if (solutionDirty) {
-                        const ok = window.confirm("有未保存修改，确认丢弃？");
-                        if (!ok) return;
-                      }
-                      setSolutionDirty(false);
-                      setSolutionId(s.id);
-                    }}
-                    className={cn(
-                      "w-full rounded-xl px-3 py-2 text-left",
-                      s.id === active?.id ? "bg-white/8" : "hover:bg-white/6",
-                    )}
-                  >
-                    <div className="truncate text-sm text-slate-200">{s.title}</div>
-                    <div className="mt-0.5 truncate text-xs text-slate-500">
-                      {s.language.toUpperCase()} · {s.version} · {s.status === "done" ? "已发布" : "草稿"}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="p-3 text-sm text-slate-500">{qSolutions.loading ? "加载中…" : "暂无已发布题解"}</div>
-            )}
+                {qSolutions.error ? (
+                  <ErrorBlock error={qSolutions.error} onAction={qSolutions.reload} className="bg-transparent p-3 shadow-none" />
+                ) : qSolutions.loading && !solutions.length ? (
+                  <LoadingBlock title="加载中…" className="bg-transparent p-3 shadow-none" />
+                ) : solutions.length ? (
+                  <div className="space-y-1">
+                    {solutions.map((s) => (
+                      <ListRowButton
+                        key={s.id}
+                        active={s.id === active?.id}
+                        onClick={() => {
+                          if (s.id === active?.id) return;
+                          if (solutionDirty) {
+                            const ok = window.confirm("有未保存修改，确认丢弃？");
+                            if (!ok) return;
+                          }
+                          setSolutionDirty(false);
+                          setSolutionId(s.id);
+                        }}
+                      >
+                        <div className="truncate text-sm text-slate-200">{s.title}</div>
+                        <div className="mt-0.5 truncate text-xs text-slate-500">
+                          {s.language.toUpperCase()} · {s.version} · {s.status === "done" ? "已发布" : "草稿"}
+                        </div>
+                      </ListRowButton>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState title="暂无已发布题解" className="bg-transparent p-3 shadow-none" />
+                )}
               </div>
           </div>
           </div>
@@ -292,9 +295,7 @@ export default function SolutionsPage() {
           {active ? (
             <SolutionEditor key={active.id} solution={active} onDirtyChange={setSolutionDirty} onReload={qSolutions.reload} />
           ) : (
-            <div className="rounded-2xl bg-white/3 p-6 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-              选择一份题解查看
-            </div>
+            <EmptyState title="选择一份题解查看" description="题解列表默认只展示已发布内容。" />
           )}
         </div>
       </div>

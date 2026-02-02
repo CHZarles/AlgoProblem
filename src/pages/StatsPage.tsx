@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { getStats } from "../api/client";
 import { Heatmap } from "../app/components/Heatmap";
 import { Button } from "../app/components/Button";
+import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 import { cn } from "../lib/cn";
 import { useApiQuery } from "../api/hooks";
 
@@ -64,32 +65,36 @@ export default function StatsPage() {
       </div>
 
       <div className="grid grid-cols-12 gap-4">
-        {[
-          { k: mode === "publish" ? "连续发布天数" : "连续复习天数", v: `${streak} 天` },
-          { k: mode === "publish" ? "近 30 天发布" : "近 30 天复习", v: `${last30 ?? "—"}` },
-          { k: mode === "publish" ? "累计发布次数" : "累计复习次数", v: `${total ?? "—"}` },
-          { k: mode === "publish" ? "已发布题解" : "已做题数", v: `${mode === "publish" ? stats?.solutionsDone ?? "—" : stats?.problemsDone ?? "—"}` },
-        ].map((x) => (
-          <div
-            key={x.k}
-            className={cn(
-              "col-span-12 sm:col-span-6 xl:col-span-3 rounded-2xl bg-white/3 p-4",
-              "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+        {!stats ? (
+          <div className="col-span-12">
+            {qStats.loading ? (
+              <LoadingBlock title="加载统计…" />
+            ) : (
+              <ErrorBlock error={qStats.error} onAction={qStats.reload} />
             )}
-          >
-            <div className="text-xs text-slate-500">{x.k}</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-50">{x.v}</div>
           </div>
-        ))}
+        ) : (
+          [
+            { k: mode === "publish" ? "连续发布天数" : "连续复习天数", v: `${streak} 天` },
+            { k: mode === "publish" ? "近 30 天发布" : "近 30 天复习", v: `${last30 ?? "—"}` },
+            { k: mode === "publish" ? "累计发布次数" : "累计复习次数", v: `${total ?? "—"}` },
+            { k: mode === "publish" ? "已发布题解" : "已做题数", v: `${mode === "publish" ? stats.solutionsDone : stats.problemsDone}` },
+          ].map((x) => (
+            <div
+              key={x.k}
+              className={cn(
+                "col-span-12 sm:col-span-6 xl:col-span-3 rounded-2xl bg-white/3 p-4",
+                "shadow-[0_0_0_1px_rgba(148,163,184,0.14)]",
+              )}
+            >
+              <div className="text-xs text-slate-500">{x.k}</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-50">{x.v}</div>
+            </div>
+          ))
+        )}
       </div>
 
-      {stats ? (
-        <Heatmap activities={stats.activities} mode={mode} />
-      ) : (
-        <div className="rounded-2xl bg-white/3 p-6 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-          {qStats.loading ? "加载中…" : "加载失败"}
-        </div>
-      )}
+      {stats ? <Heatmap activities={stats.activities} mode={mode} /> : null}
     </div>
   );
 }

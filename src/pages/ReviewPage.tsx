@@ -5,6 +5,8 @@ import { getTodayReviewQueue, reviewCheckIn, type ReviewQueueItem } from "../api
 import { useApiQuery } from "../api/hooks";
 import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
+import { EmptyState } from "../app/components/EmptyState";
+import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 import { cn } from "../lib/cn";
 
 const PRESET_MISTAKE_TAGS = ["思路", "边界", "实现", "复杂度", "数据结构", "数学", "细节"];
@@ -85,8 +87,14 @@ export default function ReviewPage() {
         </div>
 
         <div className="divide-y divide-white/8">
-          {qQueue.loading ? (
-            <div className="p-6 text-sm text-slate-500">加载中…</div>
+          {qQueue.error ? (
+            <ErrorBlock
+              error={qQueue.error}
+              onAction={qQueue.reload}
+              className="rounded-none bg-transparent p-6 shadow-none"
+            />
+          ) : qQueue.loading ? (
+            <LoadingBlock title="加载中…" className="rounded-none bg-transparent p-6 shadow-none" />
           ) : items.length ? (
             items.map((it) => (
               <div key={it.id} className="flex flex-col gap-3 px-4 py-4">
@@ -155,7 +163,11 @@ export default function ReviewPage() {
               </div>
             ))
           ) : (
-            <div className="p-6 text-sm text-slate-500">今天没有到期复习，去题库做题吧。</div>
+            <EmptyState
+              title="今天没有到期复习"
+              description="去题库做题，或把题目标记为「复习中」。"
+              className="rounded-none bg-transparent p-6 shadow-none"
+            />
           )}
         </div>
       </div>
