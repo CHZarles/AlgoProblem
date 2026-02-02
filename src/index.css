@@ -91,6 +91,61 @@ body {
   border-radius: 0.9rem;
   border-width: 1px;
   border-style: solid;
+  position: relative;
+  overflow-x: auto;
+  padding: 0.95rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.prose :where(pre)[data-language]:not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  padding-top: 1.55rem;
+}
+
+.prose :where(pre)[data-language]::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 0.45rem;
+  right: 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(148, 163, 184, 0.1);
+  padding: 0.08rem 0.45rem;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  color: rgba(148, 163, 184, 0.7);
+  user-select: none;
+  pointer-events: none;
+}
+
+.theme-light .prose :where(pre)[data-language]::before {
+  border-color: rgba(15, 23, 42, 0.14);
+  background: rgba(15, 23, 42, 0.04);
+  color: rgba(15, 23, 42, 0.58);
+}
+
+.theme-autumn .prose :where(pre)[data-language]::before {
+  border-color: rgba(61, 39, 23, 0.16);
+  background: rgba(61, 39, 23, 0.05);
+  color: rgba(61, 39, 23, 0.62);
+}
+
+.prose :where(pre code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  display: block;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-variant-ligatures: none;
+}
+
+.prose pre code.hljs {
+  padding: 0 !important;
+  background: transparent !important;
 }
 
 .prose :where(h1, h2, h3, h4, h5, h6):not(:where([class~="not-prose"], [class~="not-prose"] *)) {

@@ -5,6 +5,19 @@ import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../theme";
+import { isValidElement } from "react";
+
+function formatCodeLanguageLabel(raw: string) {
+  const lang = raw.trim().toLowerCase();
+  if (!lang) return "";
+  if (lang === "cpp" || lang === "c++") return "C++";
+  if (lang === "ts" || lang === "typescript") return "TS";
+  if (lang === "js" || lang === "javascript") return "JS";
+  if (lang === "py" || lang === "python") return "PY";
+  if (lang === "csharp" || lang === "cs" || lang === "c#") return "C#";
+  if (lang === "golang") return "GO";
+  return lang.length <= 10 ? lang.toUpperCase() : lang.slice(0, 10).toUpperCase();
+}
 
 function stripFrontmatter(markdown: string) {
   const md = markdown.replace(/\r\n/g, "\n");
@@ -129,6 +142,16 @@ export function Markdown({
           a({ href, ...props }) {
             const isExternal = typeof href === "string" && /^https?:\/\//i.test(href);
             return <a href={href} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noreferrer" : undefined} {...props} />;
+          },
+          pre({ children, ...props }) {
+            const child = Array.isArray(children) ? children[0] : children;
+            const className =
+              isValidElement(child) && typeof (child.props as { className?: unknown }).className === "string"
+                ? ((child.props as { className: string }).className as string)
+                : "";
+            const m = className.match(/language-([a-z0-9#+-]+)/i);
+            const language = m?.[1] ? formatCodeLanguageLabel(m[1]) : "";
+            return <pre {...props} data-language={language || undefined}>{children}</pre>;
           },
           table({ ...props }) {
             return (
