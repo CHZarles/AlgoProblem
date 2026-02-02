@@ -259,6 +259,7 @@ export default function NotesPage() {
   const active = activePayload?.note ?? null;
   const linkedProblems = activePayload?.problems ?? [];
   const [noteDirty, setNoteDirty] = useState(false);
+  const isNotFound = qActive.error?.status === 404;
 
   const list = useMemo(() => {
     if (!active) return libraryNotes;
@@ -321,6 +322,24 @@ export default function NotesPage() {
       });
     }
   }, [libraryNotes, noteId, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!noteId) return;
+    if (!isNotFound) return;
+    if (noteDirty) return;
+
+    // The URL can point to a deleted note (or a note deleted in another tab).
+    // Auto-heal by switching to the next available note (or clearing selection).
+    const nextId = libraryNotes.find((n) => n.id !== noteId)?.id ?? null;
+    ignoreParamNoteIdRef.current = noteId;
+    setNoteId(nextId);
+    setSearchParams((sp) => {
+      const next = new URLSearchParams(sp);
+      if (nextId) next.set("note", nextId);
+      else next.delete("note");
+      return next;
+    });
+  }, [isNotFound, libraryNotes, noteDirty, noteId, setSearchParams]);
 
   const createKnowledge = () => {
     createNote({
@@ -424,6 +443,8 @@ export default function NotesPage() {
         <div className={cn("col-span-12", focus ? "lg:col-span-12" : "lg:col-span-9")}>
           {noteId && qActive.loading ? (
             <LoadingBlock title="加载中…" />
+          ) : isNotFound ? (
+            <LoadingBlock title="已删除或不存在，正在切换…" />
           ) : qActive.error ? (
             <ErrorBlock error={qActive.error} onAction={qActive.reload} />
           ) : active ? (
