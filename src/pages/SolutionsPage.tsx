@@ -8,6 +8,7 @@ import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
 import { DropdownSelect } from "../app/components/DropdownSelect";
 import { EmptyState } from "../app/components/EmptyState";
+import { HighlightText } from "../app/components/HighlightText";
 import { Input } from "../app/components/Input";
 import { ListRowButton } from "../app/components/ListRowButton";
 import { Markdown } from "../app/components/Markdown";
@@ -276,7 +277,9 @@ export default function SolutionsPage() {
                           setSolutionId(s.id);
                         }}
                       >
-                        <div className="truncate text-sm text-slate-200">{s.title}</div>
+                        <div className="truncate text-sm text-slate-200">
+                          <HighlightText text={s.title} query={query} />
+                        </div>
                         <div className="mt-0.5 truncate text-xs text-slate-500">
                           {s.language.toUpperCase()} · {s.version} · {s.status === "done" ? "已发布" : "草稿"}
                         </div>

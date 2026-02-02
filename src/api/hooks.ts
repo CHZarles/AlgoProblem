@@ -6,6 +6,7 @@ export function useApiQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const prevKeyRef = useRef<string | null>(null);
   const hasDataRef = useRef(false);
 
@@ -20,9 +21,11 @@ export function useApiQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
       hasDataRef.current = false;
       setData(null);
       setLoading(true);
+      setRefreshing(false);
     } else {
       // Avoid UI "flash" on background reloads when we already have data.
       setLoading(!hasDataRef.current);
+      setRefreshing(hasDataRef.current);
     }
 
     setError(null);
@@ -44,6 +47,7 @@ export function useApiQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
       .finally(() => {
         if (!alive) return;
         setLoading(false);
+        setRefreshing(false);
       });
     return () => {
       alive = false;
@@ -55,6 +59,7 @@ export function useApiQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
     data,
     error,
     loading,
+    refreshing,
     reload: () => setReloadToken((x) => x + 1),
   };
 }

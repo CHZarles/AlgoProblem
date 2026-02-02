@@ -104,6 +104,8 @@ body {
 }
 
 .prose :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 1.45em;
+  margin-bottom: 0.65em;
   font-size: 1.15rem;
   line-height: 1.25;
   padding-bottom: 0.35em;
@@ -111,23 +113,51 @@ body {
 }
 
 .prose :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 1.2em;
+  margin-bottom: 0.45em;
   font-size: 1.05rem;
   line-height: 1.3;
 }
 
 .prose :where(h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 1.05em;
+  margin-bottom: 0.4em;
   font-size: 0.98rem;
   line-height: 1.35;
 }
 
 .prose :where(h5):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 0.95em;
+  margin-bottom: 0.35em;
   font-size: 0.92rem;
   line-height: 1.4;
 }
 
 .prose :where(h6):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 0.9em;
+  margin-bottom: 0.3em;
   font-size: 0.86rem;
   line-height: 1.4;
+}
+
+.prose :where(p):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 0.7em;
+  margin-bottom: 0.7em;
+}
+
+.prose :where(ul, ol):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+
+.prose :where(li):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.prose :where(mark:not([class])):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-radius: 0.35rem;
+  padding: 0 0.2em;
 }
 
 .theme-dark .prose :where(code):not(:where(pre code, [class~="not-prose"], [class~="not-prose"] *)) {
@@ -247,6 +277,13 @@ body {
 }
 .theme-light .bg-\[\#0F1520\] {
   background-color: rgb(255 255 255);
+}
+
+.theme-light .bg-black\/10 {
+  background-color: rgb(15 23 42 / 0.03);
+}
+.theme-light .bg-black\/20 {
+  background-color: rgb(15 23 42 / 0.05);
 }
 
 .theme-light .bg-white\/3 {
@@ -517,6 +554,13 @@ body {
 }
 .theme-autumn .bg-\[\#0F1520\] {
   background-color: rgb(255 250 244);
+}
+
+.theme-autumn .bg-black\/10 {
+  background-color: rgba(61, 39, 23, 0.04);
+}
+.theme-autumn .bg-black\/20 {
+  background-color: rgba(61, 39, 23, 0.06);
 }
 
 .theme-autumn .bg-white\/3 {

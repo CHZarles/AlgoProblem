@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, Circle, Filter, FolderPlus, MoreHorizontal, Save, Sparkles, Trash2, X } from "lucide-react";
+import { CheckCircle2, Circle, Filter, FolderPlus, Loader2, MoreHorizontal, Save, Sparkles, Trash2, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { toast } from "sonner";
 import type { Difficulty, OJPlatform, Problem, ProblemStatus } from "../types/model";
@@ -24,6 +24,7 @@ import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { useDensity } from "../app/density";
 import { EmptyState } from "../app/components/EmptyState";
 import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
+import { HighlightText } from "../app/components/HighlightText";
 
 function difficultyTone(d: Difficulty) {
   if (d === "easy") return "easy";
@@ -318,6 +319,7 @@ export default function ProblemsPage() {
             <div className="text-xs text-slate-500">
               {total ? `${offset + 1}-${Math.min(offset + pageSize, total)}` : "0"} / {total}
             </div>
+            {qProblems.refreshing ? <Loader2 className="ml-2 h-3.5 w-3.5 animate-spin text-slate-500" /> : null}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -365,7 +367,7 @@ export default function ProblemsPage() {
             </div>
           ) : problems.length ? (
             <table className="w-full min-w-[980px] table-fixed">
-              <thead className="bg-black/10 text-left text-xs text-slate-500">
+              <thead className="sticky top-0 z-10 bg-black/10 text-left text-xs text-slate-500">
                 <tr>
                   <th className={cn("w-12 px-4", headerPy)}>
                     <input
@@ -411,14 +413,14 @@ export default function ProblemsPage() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <Link to={`/problems/${p.id}`} className="truncate font-medium text-slate-50 hover:underline">
-                              {p.title}
+                              <HighlightText text={p.title} query={query} />
                             </Link>
                             <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">
                               {p.platform.toUpperCase()}
                             </span>
                           </div>
                           <div className="mt-0.5 truncate text-xs text-slate-500">
-                            {p.externalId ?? p.canonicalUrl} ·{" "}
+                            <HighlightText text={p.externalId ?? p.canonicalUrl} query={query} /> ·{" "}
                             {canOpenSource ? (
                               <a className="hover:underline" href={p.sourceUrl} target="_blank" rel="noreferrer">
                                 打开原题

@@ -7,6 +7,7 @@ import { createNote, deleteNote, getNote, linkNote, listNotes, patchNote, unlink
 import { Badge } from "../app/components/Badge";
 import { Button } from "../app/components/Button";
 import { EmptyState } from "../app/components/EmptyState";
+import { HighlightText } from "../app/components/HighlightText";
 import { Input } from "../app/components/Input";
 import { ListRowButton } from "../app/components/ListRowButton";
 import { Markdown } from "../app/components/Markdown";
@@ -378,7 +379,9 @@ export default function NotesPage() {
                           });
                         }}
                       >
-                        <div className="truncate text-sm text-slate-200">{n.title}</div>
+                        <div className="truncate text-sm text-slate-200">
+                          <HighlightText text={n.title} query={query} />
+                        </div>
                         <div className="mt-0.5 truncate text-xs text-slate-500">
                           {new Date(n.updatedAt).toLocaleString()}
                           {n.problemIds.length ? (
