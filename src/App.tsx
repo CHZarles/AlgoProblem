@@ -20,7 +20,9 @@ function AppShell() {
     theme.resolved === "light"
       ? theme.preference === "autumn"
         ? "bg-[#FFFAF4] text-slate-800 shadow-[0_0_0_1px_rgba(61,39,23,0.16)] shadow-panel"
-        : "bg-white text-slate-800 shadow-[0_0_0_1px_rgba(15,23,42,0.12)] shadow-panel"
+        : theme.preference === "paper"
+          ? "bg-[#F4F1EA] text-slate-800 shadow-[0_0_0_1px_rgba(20,23,31,0.12)] shadow-panel"
+          : "bg-white text-slate-800 shadow-[0_0_0_1px_rgba(15,23,42,0.12)] shadow-panel"
       : "bg-[#0F1520] text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.14)] shadow-panel";
   return (
     <>

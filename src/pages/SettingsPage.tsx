@@ -8,7 +8,7 @@ import { exportWorkspace, getSettings, importWorkspace, patchSettings, testAcwin
 import { useApiQuery } from "../api/hooks";
 import { ApiError } from "../api/http";
 import { useTheme, type ThemePreference } from "../app/theme";
-import { Check, Leaf, Moon, Sun } from "lucide-react";
+import { Check, FileText, Leaf, Moon, Sun } from "lucide-react";
 
 export default function SettingsPage() {
   const theme = useTheme();
@@ -78,7 +78,7 @@ export default function SettingsPage() {
         )}
       >
         <div className="text-sm font-semibold text-slate-200">外观</div>
-        <div className="mt-1 text-sm text-slate-500">主题切换：浅色 / 秋天 / 深色（偏好存储在本地浏览器）。</div>
+        <div className="mt-1 text-sm text-slate-500">主题切换：浅色 / 纸张 / 秋天 / 深色（偏好存储在本地浏览器）。</div>
 
         <div className="mt-4 grid gap-3">
           <div>
@@ -94,6 +94,14 @@ export default function SettingsPage() {
                       Icon: Sun,
                       iconClass: "text-amber-400",
                       iconWrap: "bg-amber-500/14 shadow-[0_0_0_1px_rgba(245,158,11,0.22)]",
+                    },
+                    {
+                      value: "paper",
+                      label: "纸张",
+                      hint: "阅读",
+                      Icon: FileText,
+                      iconClass: "text-slate-200",
+                      iconWrap: "bg-slate-500/14 shadow-[0_0_0_1px_rgba(148,163,184,0.20)]",
                     },
                     {
                       value: "autumn",
@@ -144,11 +152,7 @@ export default function SettingsPage() {
             </div>
             <div className="mt-1 text-xs text-slate-500">
               当前生效：
-              {theme.preference === "autumn"
-                ? "秋天"
-                : theme.resolved === "light"
-                  ? "浅色"
-                  : "深色"}
+              {theme.preference === "autumn" ? "秋天" : theme.preference === "paper" ? "纸张" : theme.resolved === "light" ? "浅色" : "深色"}
             </div>
           </div>
         </div>
