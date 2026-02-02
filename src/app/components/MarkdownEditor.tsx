@@ -1,10 +1,15 @@
 import { useMemo, useState } from "react";
 import { cn } from "../../lib/cn";
-import { applyTextareaTabIndent } from "../../lib/textareaIndent";
+import { toggleMarkdownTaskAtIndex } from "../../lib/markdownTasks";
+import { applyTextareaMarkdownEnter, applyTextareaTabIndent } from "../../lib/textareaIndent";
 import { Button } from "./Button";
 import { Markdown } from "./Markdown";
 
 type Mode = "split" | "write" | "preview";
+
+function isComposing(e: { nativeEvent?: unknown }) {
+  return Boolean((e.nativeEvent as { isComposing?: boolean } | undefined)?.isComposing);
+}
 
 export function MarkdownEditor({
   value,
@@ -79,22 +84,41 @@ export function MarkdownEditor({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key !== "Tab") return;
-                e.preventDefault();
-                e.stopPropagation();
                 const el = e.currentTarget;
-                const out = applyTextareaTabIndent({
-                  value,
-                  selectionStart: el.selectionStart ?? 0,
-                  selectionEnd: el.selectionEnd ?? 0,
-                  indent: "  ",
-                  outdent: e.shiftKey,
-                });
-                onChange(out.value);
-                requestAnimationFrame(() => {
-                  el.selectionStart = out.selectionStart;
-                  el.selectionEnd = out.selectionEnd;
-                });
+
+                if (e.key === "Tab") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const out = applyTextareaTabIndent({
+                    value,
+                    selectionStart: el.selectionStart ?? 0,
+                    selectionEnd: el.selectionEnd ?? 0,
+                    indent: "  ",
+                    outdent: e.shiftKey,
+                  });
+                  onChange(out.value);
+                  requestAnimationFrame(() => {
+                    el.selectionStart = out.selectionStart;
+                    el.selectionEnd = out.selectionEnd;
+                  });
+                  return;
+                }
+
+                if (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey && !isComposing(e)) {
+                  const out = applyTextareaMarkdownEnter({
+                    value,
+                    selectionStart: el.selectionStart ?? 0,
+                    selectionEnd: el.selectionEnd ?? 0,
+                  });
+                  if (!out) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange(out.value);
+                  requestAnimationFrame(() => {
+                    el.selectionStart = out.selectionStart;
+                    el.selectionEnd = out.selectionEnd;
+                  });
+                }
               }}
               placeholder={placeholder}
               rows={rows}
@@ -111,7 +135,11 @@ export function MarkdownEditor({
         {mode !== "write" ? (
           <div className="min-h-0 p-3">
             <div className="h-full overflow-auto rounded-xl bg-black/10 p-3 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
-              <Markdown value={value || "（空）"} />
+              <Markdown
+                value={value || "（空）"}
+                interactiveTasks
+                onToggleTask={(idx, checked) => onChange(toggleMarkdownTaskAtIndex(value, idx, checked))}
+              />
             </div>
           </div>
         ) : null}

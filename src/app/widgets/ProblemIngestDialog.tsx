@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ClipboardPaste, FileText, Link2, Loader2, X, XCircle } from "lucide-react";
 import { createProblemManual, ingestProblems } from "../../api/client";
 import { cn } from "../../lib/cn";
-import { applyTextareaTabIndent } from "../../lib/textareaIndent";
+import { applyTextareaMarkdownEnter, applyTextareaTabIndent } from "../../lib/textareaIndent";
 import { Button } from "../components/Button";
 import { Badge } from "../components/Badge";
 import { Input } from "../components/Input";
@@ -22,6 +22,10 @@ type UiIngestResult = {
   code?: string;
   httpStatus?: number;
 };
+
+function isComposing(e: { nativeEvent?: unknown }) {
+  return Boolean((e.nativeEvent as { isComposing?: boolean } | undefined)?.isComposing);
+}
 
 function guessTitleFromMarkdown(markdown: string) {
   const md = markdown.replace(/\r\n/g, "\n");
@@ -407,22 +411,41 @@ export function ProblemIngestDialog({
                       value={manualMarkdown}
                       onChange={(e) => setManualMarkdown(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key !== "Tab") return;
-                        e.preventDefault();
-                        e.stopPropagation();
                         const el = e.currentTarget;
-                        const out = applyTextareaTabIndent({
-                          value: manualMarkdown,
-                          selectionStart: el.selectionStart ?? 0,
-                          selectionEnd: el.selectionEnd ?? 0,
-                          indent: "  ",
-                          outdent: e.shiftKey,
-                        });
-                        setManualMarkdown(out.value);
-                        requestAnimationFrame(() => {
-                          el.selectionStart = out.selectionStart;
-                          el.selectionEnd = out.selectionEnd;
-                        });
+
+                        if (e.key === "Tab") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const out = applyTextareaTabIndent({
+                            value: manualMarkdown,
+                            selectionStart: el.selectionStart ?? 0,
+                            selectionEnd: el.selectionEnd ?? 0,
+                            indent: "  ",
+                            outdent: e.shiftKey,
+                          });
+                          setManualMarkdown(out.value);
+                          requestAnimationFrame(() => {
+                            el.selectionStart = out.selectionStart;
+                            el.selectionEnd = out.selectionEnd;
+                          });
+                          return;
+                        }
+
+                        if (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey && !isComposing(e)) {
+                          const out = applyTextareaMarkdownEnter({
+                            value: manualMarkdown,
+                            selectionStart: el.selectionStart ?? 0,
+                            selectionEnd: el.selectionEnd ?? 0,
+                          });
+                          if (!out) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setManualMarkdown(out.value);
+                          requestAnimationFrame(() => {
+                            el.selectionStart = out.selectionStart;
+                            el.selectionEnd = out.selectionEnd;
+                          });
+                        }
                       }}
                       placeholder={"粘贴 Markdown 题面（支持 $...$ / $$...$$ 公式）"}
                       rows={10}

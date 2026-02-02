@@ -122,3 +122,85 @@ export function applyTextareaTabIndent({
   return { value: nextValue, selectionStart: nextStart, selectionEnd: nextEnd };
 }
 
+function parseMarkdownListPrefix(line: string) {
+  const quoteMatch = line.match(/^(\s*(?:>\s*)*)/);
+  const quote = quoteMatch?.[1] ?? "";
+  const rest = line.slice(quote.length);
+
+  const unorderedTask = rest.match(/^(\s*)([-*+])(\s+)\[([ xX])\](\s*)(.*)$/);
+  if (unorderedTask) {
+    const [, indent, marker, ws1, _checked, ws2, text] = unorderedTask;
+    const after = ws2.length ? ws2 : " ";
+    const prefix = indent + marker + ws1 + `[ ]` + after;
+    const consumedLen = (indent + marker + ws1 + `[${_checked}]` + ws2).length;
+    return { kind: "task" as const, quote, indent, prefix, consumedLen, hasContent: text.trim().length > 0 };
+  }
+
+  const orderedTask = rest.match(/^(\s*)(\d+)([.)])(\s+)\[([ xX])\](\s*)(.*)$/);
+  if (orderedTask) {
+    const [, indent, numRaw, delim, ws1, _checked, ws2, text] = orderedTask;
+    const after = ws2.length ? ws2 : " ";
+    const n = Number(numRaw);
+    const nextNum = Number.isFinite(n) ? String(n + 1) : "1";
+    const prefix = indent + nextNum + delim + ws1 + `[ ]` + after;
+    const consumedLen = (indent + numRaw + delim + ws1 + `[${_checked}]` + ws2).length;
+    return { kind: "task" as const, quote, indent, prefix, consumedLen, hasContent: text.trim().length > 0 };
+  }
+
+  const unordered = rest.match(/^(\s*)([-*+])(\s+)(.*)$/);
+  if (unordered) {
+    const [, indent, marker, ws, text] = unordered;
+    const prefix = indent + marker + ws;
+    const consumedLen = prefix.length;
+    return { kind: "list" as const, quote, indent, prefix, consumedLen, hasContent: text.trim().length > 0 };
+  }
+
+  const ordered = rest.match(/^(\s*)(\d+)([.)])(\s+)(.*)$/);
+  if (ordered) {
+    const [, indent, numRaw, delim, ws, text] = ordered;
+    const n = Number(numRaw);
+    const nextNum = Number.isFinite(n) ? String(n + 1) : "1";
+    const prefix = indent + nextNum + delim + ws;
+    const consumedLen = (indent + numRaw + delim + ws).length;
+    return { kind: "list" as const, quote, indent, prefix, consumedLen, hasContent: text.trim().length > 0 };
+  }
+
+  return null;
+}
+
+export function applyTextareaMarkdownEnter({
+  value,
+  selectionStart,
+  selectionEnd,
+}: {
+  value: string;
+  selectionStart: number;
+  selectionEnd: number;
+}): IndentResult | null {
+  const start = clamp(selectionStart, 0, value.length);
+  const end = clamp(selectionEnd, 0, value.length);
+  if (start !== end) return null;
+
+  const lineStartIdx = lineStart(value, start);
+  const lineEndIdx = lineEnd(value, start);
+  const line = value.slice(lineStartIdx, lineEndIdx);
+  const posInLine = start - lineStartIdx;
+
+  const info = parseMarkdownListPrefix(line);
+  if (!info) return null;
+
+  const prefixEndInLine = info.quote.length + info.consumedLen;
+  if (posInLine < prefixEndInLine) return null;
+
+  if (!info.hasContent && posInLine >= prefixEndInLine) {
+    // Empty list item: remove marker / checkbox and keep indent (exit list).
+    const keepAbs = lineStartIdx + info.quote.length + info.indent.length;
+    const nextValue = value.slice(0, keepAbs) + value.slice(lineEndIdx);
+    return { value: nextValue, selectionStart: keepAbs, selectionEnd: keepAbs };
+  }
+
+  const insert = "\n" + info.quote + info.prefix;
+  const nextValue = value.slice(0, start) + insert + value.slice(start);
+  const nextPos = start + insert.length;
+  return { value: nextValue, selectionStart: nextPos, selectionEnd: nextPos };
+}

@@ -6,7 +6,8 @@ import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
+import type { PropertyDefinition } from "hast-util-sanitize";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../theme";
 
@@ -23,13 +24,13 @@ function formatCodeLanguageLabel(raw: string) {
 }
 
 const SANITIZE_SCHEMA = (() => {
-  const base = defaultSchema as any;
+  const base: SanitizeSchema = defaultSchema;
   const tagNames = Array.from(
     new Set([...(base.tagNames ?? []), "sup", "sub", "kbd", "details", "summary", "input", "mark"]),
   );
 
-  const attrs = { ...(base.attributes ?? {}) } as Record<string, unknown[]>;
-  const add = (tag: string, extra: string[]) => {
+  const attrs: Record<string, PropertyDefinition[]> = { ...(base.attributes ?? {}) };
+  const add = (tag: string, extra: PropertyDefinition[]) => {
     attrs[tag] = Array.from(new Set([...(attrs[tag] ?? []), ...extra]));
   };
 
@@ -49,7 +50,7 @@ const SANITIZE_SCHEMA = (() => {
     src: ["http", "https", "data"],
   };
 
-  return { ...base, tagNames, attributes: attrs, protocols } as any;
+  return { ...base, tagNames, attributes: attrs, protocols };
 })();
 
 function stripFrontmatter(markdown: string) {
@@ -149,15 +150,20 @@ export function Markdown({
   value,
   className,
   mode = "default",
+  interactiveTasks = false,
+  onToggleTask,
 }: {
   value: string;
   className?: string;
   mode?: "default" | "statement";
+  interactiveTasks?: boolean;
+  onToggleTask?: (taskIndex: number, checked: boolean) => void;
 }) {
   const theme = useTheme();
   const base = normalizeLatexInMath(normalizeBoldLabels(stripOuterMarkdownFence(stripFrontmatter(value))));
   const normalized = mode === "statement" ? normalizeStatementLayout(base) : base;
   const isLight = theme.resolved === "light";
+  let taskIndex = 0;
   return (
     <div
       className={cn(
@@ -175,6 +181,22 @@ export function Markdown({
           a({ href, ...props }) {
             const isExternal = typeof href === "string" && /^https?:\/\//i.test(href);
             return <a href={href} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noreferrer" : undefined} {...props} />;
+          },
+          input({ type, checked, ...props }) {
+            if (type !== "checkbox") return <input type={type} {...props} />;
+            const idx = taskIndex++;
+            return (
+              <input
+                {...props}
+                type="checkbox"
+                checked={Boolean(checked)}
+                disabled={!interactiveTasks}
+                onChange={(e) => {
+                  if (!interactiveTasks) return;
+                  onToggleTask?.(idx, e.currentTarget.checked);
+                }}
+              />
+            );
           },
           pre({ children, ...props }) {
             const child = Array.isArray(children) ? children[0] : children;
