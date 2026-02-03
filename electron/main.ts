@@ -1,4 +1,4 @@
-import { BrowserWindow, app, shell } from "electron";
+import { BrowserWindow, Menu, app, shell } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 import type { AddressInfo } from "node:net";
@@ -23,11 +23,15 @@ function createMainWindow(url: string) {
     backgroundColor: "#0B0F14",
     show: false,
     titleBarStyle: "hiddenInset",
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
+
+  win.removeMenu();
+  win.setMenuBarVisibility(false);
 
   win.once("ready-to-show", () => win.show());
   void win.loadURL(url);
@@ -43,6 +47,10 @@ function createMainWindow(url: string) {
 async function start() {
   // Ensure we serve the built SPA when packaged.
   process.env.NODE_ENV = "production";
+
+  if (process.platform !== "darwin") {
+    Menu.setApplicationMenu(null);
+  }
 
   // Persist all workspace data under userData (writable on Windows installers).
   const userData = app.getPath("userData");
@@ -93,4 +101,3 @@ if (!gotLock) {
     app.quit();
   });
 }
-
