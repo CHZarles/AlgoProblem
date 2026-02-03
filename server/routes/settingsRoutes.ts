@@ -26,7 +26,7 @@ export function settingsRoutes() {
   r.use(requireWorkspace);
 
   r.get("/", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const rows = d
       .prepare("SELECT key, value FROM settings WHERE workspace_id = ?")
@@ -68,7 +68,7 @@ export function settingsRoutes() {
     const body = Body.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "invalid_request" });
 
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const updates: Array<{ key: string; value?: string }> = [];
 
@@ -118,7 +118,7 @@ export function settingsRoutes() {
   });
 
   r.post("/test-acwing", async (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({ url: z.string().min(1) });
     const body = Body.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "invalid_request" });
@@ -147,7 +147,7 @@ export function settingsRoutes() {
   });
 
   r.post("/test-llm", async (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const rows = d
       .prepare(

@@ -38,7 +38,7 @@ export function workspaceRoutes() {
   r.use(requireWorkspace);
 
   r.get("/export", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const exportedAt = nowIso();
 
@@ -87,18 +87,18 @@ export function workspaceRoutes() {
   });
 
   r.post("/import", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({
       version: z.number().int(),
       tables: z.object({
-        problems: z.array(z.record(z.unknown())),
-        notes: z.array(z.record(z.unknown())),
-        noteProblems: z.array(z.record(z.unknown())).optional(),
-        solutions: z.array(z.record(z.unknown())),
-        collections: z.array(z.record(z.unknown())),
-        collectionProblems: z.array(z.record(z.unknown())),
-        activities: z.array(z.record(z.unknown())),
-        problemRelations: z.array(z.record(z.unknown())),
+        problems: z.array(z.record(z.string(), z.unknown())),
+        notes: z.array(z.record(z.string(), z.unknown())),
+        noteProblems: z.array(z.record(z.string(), z.unknown())).optional(),
+        solutions: z.array(z.record(z.string(), z.unknown())),
+        collections: z.array(z.record(z.string(), z.unknown())),
+        collectionProblems: z.array(z.record(z.string(), z.unknown())),
+        activities: z.array(z.record(z.string(), z.unknown())),
+        problemRelations: z.array(z.record(z.string(), z.unknown())),
         settings: z.array(z.object({ key: z.string(), value: z.string() })),
       }),
     });

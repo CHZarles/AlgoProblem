@@ -38,7 +38,7 @@ export function createApp() {
   app.use("/api/workspace", workspaceRoutes());
 
   if (process.env.NODE_ENV === "production") {
-    const distDir = path.resolve(process.cwd(), "dist");
+    const distDir = path.resolve(process.env.STATIC_DIR ?? path.resolve(process.cwd(), "dist"));
     if (fs.existsSync(distDir)) {
       app.use(express.static(distDir));
       // Express 5's path-to-regexp no longer accepts "*" as a path string.

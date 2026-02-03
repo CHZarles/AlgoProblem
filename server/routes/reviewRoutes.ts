@@ -9,7 +9,7 @@ export function reviewRoutes() {
   r.use(requireWorkspace);
 
   r.get("/today", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Query = z.object({ limit: z.coerce.number().int().min(1).max(200).default(60) });
     const q = Query.parse({ limit: req.query.limit });
     const items = listTodayReviewQueue(workspaceId, q.limit);
@@ -17,7 +17,7 @@ export function reviewRoutes() {
   });
 
   r.post("/:problemId/checkin", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({
       result: z.enum(["good", "hard", "again"]).default("good"),
       mistakeTags: z.array(z.string()).optional(),
@@ -37,4 +37,3 @@ export function reviewRoutes() {
 
   return r;
 }
-

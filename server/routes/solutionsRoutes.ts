@@ -10,7 +10,7 @@ export function solutionsRoutes() {
   r.use(requireWorkspace);
 
   r.get("/", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const q = (req.query.q as string | undefined)?.trim() ?? "";
     const language = (req.query.language as string | undefined) ?? "all";
     const rawStatus = (req.query.status as string | undefined) ?? "all";
@@ -55,7 +55,7 @@ export function solutionsRoutes() {
   });
 
   r.post("/", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({
       problemId: z.string().min(1),
       title: z.string().min(1),
@@ -120,7 +120,7 @@ export function solutionsRoutes() {
   });
 
   r.patch("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({
       title: z.string().min(1).optional(),
       language: z.string().min(1).optional(),
@@ -214,7 +214,7 @@ export function solutionsRoutes() {
   });
 
   r.delete("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const ts = nowIso();
 

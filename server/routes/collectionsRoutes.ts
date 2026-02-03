@@ -36,7 +36,7 @@ export function collectionsRoutes() {
   r.use(requireWorkspace);
 
   r.get("/", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const rows = d
       .prepare(
@@ -74,7 +74,7 @@ export function collectionsRoutes() {
   });
 
   r.post("/", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({
       name: z.string().min(1),
       description: z.string().optional(),
@@ -110,7 +110,7 @@ export function collectionsRoutes() {
   });
 
   r.get("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const col = d
       .prepare("SELECT * FROM collections WHERE id = ? AND workspace_id = ?")
@@ -134,7 +134,7 @@ export function collectionsRoutes() {
   });
 
   r.patch("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({
       name: z.string().min(1).optional(),
       description: z.string().optional().nullable(),
@@ -192,7 +192,7 @@ export function collectionsRoutes() {
   });
 
   r.get("/:id/plan", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const collectionId = req.params.id;
 
@@ -327,7 +327,7 @@ export function collectionsRoutes() {
   });
 
   r.delete("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const id = req.params.id;
     const exists = d.prepare("SELECT id FROM collections WHERE id = ? AND workspace_id = ?").get(id, workspaceId) as
@@ -339,7 +339,7 @@ export function collectionsRoutes() {
   });
 
   r.post("/:id/problems", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({ problemId: z.string().min(1) });
     const body = Body.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "invalid_request" });
@@ -384,7 +384,7 @@ export function collectionsRoutes() {
   });
 
   r.delete("/:id/problems/:problemId", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const collectionId = req.params.id;
     const problemId = req.params.problemId;
@@ -419,7 +419,7 @@ export function collectionsRoutes() {
   });
 
   r.post("/:id/reorder", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({ problemIds: z.array(z.string().min(1)) });
     const body = Body.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "invalid_request" });

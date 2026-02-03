@@ -48,7 +48,7 @@ export function htmlToMarkdown(html: string) {
   // Preserve common math-ish formatting
   td.addRule("sup", {
     filter: "sup",
-    replacement: (content) => {
+    replacement: (content: string) => {
       const v = content.trim();
       if (!v) return "";
       return v.length === 1 ? `^${v}` : `^{${v}}`;
@@ -56,7 +56,7 @@ export function htmlToMarkdown(html: string) {
   });
   td.addRule("sub", {
     filter: "sub",
-    replacement: (content) => {
+    replacement: (content: string) => {
       const v = content.trim();
       if (!v) return "";
       return v.length === 1 ? `_${v}` : `_{${v}}`;

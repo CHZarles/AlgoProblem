@@ -23,7 +23,7 @@ export function notesRoutes() {
   r.use(requireWorkspace);
 
   r.get("/", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const q = (req.query.q as string | undefined)?.trim() ?? "";
     const kind = (req.query.kind as string | undefined) ?? "all";
     const problemId = (req.query.problemId as string | undefined)?.trim() ?? "";
@@ -74,7 +74,7 @@ export function notesRoutes() {
   });
 
   r.get("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const noteId = req.params.id;
 
@@ -137,7 +137,7 @@ export function notesRoutes() {
   });
 
   r.post("/", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({
       kind: z.enum(["problem", "knowledge"]),
       title: z.string().min(1),
@@ -193,7 +193,7 @@ export function notesRoutes() {
   });
 
   r.patch("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({
       title: z.string().min(1).optional(),
       body: z.string().optional(),
@@ -252,7 +252,7 @@ export function notesRoutes() {
   });
 
   r.delete("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const ts = nowIso();
 
@@ -289,7 +289,7 @@ export function notesRoutes() {
   });
 
   r.post("/:id/links", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({
       problemId: z.string().optional(),
       problemIds: z.array(z.string()).optional(),
@@ -339,7 +339,7 @@ export function notesRoutes() {
   });
 
   r.delete("/:id/links/:problemId", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const ts = nowIso();
     const noteId = req.params.id;

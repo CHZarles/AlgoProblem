@@ -96,7 +96,7 @@ export function problemsRoutes() {
   r.use(requireWorkspace);
 
   r.get("/tags", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const limit = Math.max(1, Math.min(500, Number(req.query.limit ?? 200)));
     const d = db();
 
@@ -122,7 +122,7 @@ export function problemsRoutes() {
   });
 
   r.get("/platforms", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const limit = Math.max(1, Math.min(200, Number(req.query.limit ?? 80)));
     const d = db();
 
@@ -158,7 +158,7 @@ export function problemsRoutes() {
       .map((t) => t.trim().replace(/^#/, "").toLowerCase())
       .filter(Boolean);
 
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
 
     const where: string[] = ["p.workspace_id = ?"];
@@ -293,7 +293,7 @@ export function problemsRoutes() {
     const parsed = Body.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "invalid_request" });
 
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const llm = readLlmConfig(workspaceId);
     const acwingCookie = readAcwingCookie(workspaceId);
@@ -438,7 +438,7 @@ export function problemsRoutes() {
     const parsed = Body.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "invalid_request" });
 
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const ts = nowIso();
     const warnings: string[] = [];
@@ -600,7 +600,7 @@ ${rawMarkdown}
   });
 
   r.get("/:id/related", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const problemId = req.params.id;
 
@@ -678,7 +678,7 @@ ${rawMarkdown}
   });
 
   r.post("/:id/classic-next", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Body = z.object({ nextProblemId: z.string().min(1).optional().nullable() });
     const body = Body.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "invalid_request" });
@@ -716,7 +716,7 @@ ${rawMarkdown}
   });
 
   r.get("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const problemId = req.params.id;
 
@@ -832,7 +832,7 @@ ${rawMarkdown}
   });
 
   r.patch("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const Body = z.object({
       platform: z.string().min(1).max(64).optional(),
@@ -887,7 +887,7 @@ ${rawMarkdown}
   });
 
   r.post("/:id/status", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const Body = z.object({ status: z.enum(["todo", "done", "reviewing", "classic", "abandoned"]) });
     const body = Body.safeParse(req.body);
@@ -939,7 +939,7 @@ ${rawMarkdown}
   });
 
   r.post("/:id/review", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const Body = z.object({
       result: z.enum(["good", "hard", "again"]).default("good"),
@@ -970,11 +970,11 @@ ${rawMarkdown}
       );
     }
 
-    return res.json({ ok: true, ...out });
+    return res.json(out);
   });
 
   r.delete("/:id", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const problemId = req.params.id;
 

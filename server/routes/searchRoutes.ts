@@ -18,7 +18,7 @@ export function searchRoutes() {
   r.use(requireWorkspace);
 
   r.get("/", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const Query = z.object({ q: z.string().default("") });
     const q = Query.parse({ q: (req.query.q as string | undefined) ?? "" }).q.trim();
     const like = `%${q}%`;

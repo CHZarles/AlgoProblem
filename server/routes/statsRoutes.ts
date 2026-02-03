@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { WorkspaceRequest } from "../http";
 import { requireWorkspace } from "../http";
 import { db } from "../db";
+import { env } from "../env";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -44,7 +45,7 @@ export function statsRoutes() {
   r.use(requireWorkspace);
 
   r.get("/", (req, res) => {
-    const workspaceId = (req as WorkspaceRequest).workspaceId;
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
     const problemsTotal = (d
       .prepare("SELECT COUNT(1) as c FROM problems WHERE workspace_id = ?")
@@ -87,7 +88,7 @@ export function statsRoutes() {
       .prepare("SELECT * FROM activities WHERE workspace_id = ? AND at >= ? ORDER BY at DESC")
       .all(workspaceId, since400) as Array<Record<string, unknown>>;
 
-    const dataDir = path.resolve(process.cwd(), ".data");
+    const dataDir = path.resolve(path.dirname(env().DATABASE_PATH));
     const dataBytes = safeDirSizeBytes(dataDir);
 
     return res.json({
