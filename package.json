@@ -12,7 +12,7 @@
     "build:demo": "VITE_DEMO=true vite build",
     "electron:compile": "tsc -p tsconfig.electron.json && node scripts/electron-postcompile.cjs",
     "electron:dev": "npm run build && npm run electron:compile && electron .",
-    "dist:win": "npm run build && npm run electron:compile && electron-builder --win --x64",
+    "dist:win": "npm run build && npm run electron:compile && electron-builder --win --x64 --publish never",
     "lint": "eslint .",
     "preview": "vite preview",
     "preview:demo": "VITE_DEMO=true vite preview",
