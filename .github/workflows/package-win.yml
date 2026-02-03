@@ -29,12 +29,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AlgoWorkspace-win
-          path: release/**
+          path: |
+            release/*Setup*.exe
+            release/*.blockmap
+            release/latest.yml
+            release/app-update.yml
 
       - name: Publish GitHub Release (tag builds)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/**
+          files: |
+            release/*Setup*.exe
+            release/*.blockmap
+            release/latest.yml
+            release/app-update.yml
           generate_release_notes: true
-
