@@ -1,4 +1,4 @@
-import { BrowserWindow, Menu, app, shell } from "electron";
+import { BrowserWindow, Menu, app, dialog, shell } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 import type { AddressInfo } from "node:net";
@@ -64,10 +64,24 @@ async function start() {
   ensureWorkspace();
 
   const expressApp = createApp();
-  const server = expressApp.listen(0, "127.0.0.1", () => {
+  const host = "127.0.0.1";
+  const port = Number(process.env.ALGO_WORKSPACE_PORT || 8787);
+  process.env.PORT = String(port);
+
+  const server = expressApp.listen(port, host);
+  server.once("listening", () => {
     const addr = server.address() as AddressInfo | null;
-    const port = addr?.port ?? 0;
-    mainWindow = createMainWindow(`http://127.0.0.1:${port}`);
+    const actualPort = addr?.port ?? port;
+    mainWindow = createMainWindow(`http://${host}:${actualPort}`);
+  });
+  server.once("error", (err) => {
+    console.error(err);
+    if ((err as NodeJS.ErrnoException).code === "EADDRINUSE") {
+      dialog.showErrorBox("启动失败", `端口 ${port} 已被占用，请关闭占用端口的程序后重试。`);
+    } else {
+      dialog.showErrorBox("启动失败", err instanceof Error ? err.message : "unknown_error");
+    }
+    app.quit();
   });
 
   serverClose = () => server.close();

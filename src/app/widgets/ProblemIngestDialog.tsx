@@ -381,7 +381,7 @@ export function ProblemIngestDialog({
                   <textarea
                     value={raw}
                     onChange={(e) => setRaw(e.target.value)}
-                    placeholder={"https://leetcode.com/problems/two-sum/\nhttps://www.acwing.com/problem/content/2/"}
+                    placeholder={"https://leetcode.cn/problems/two-sum/\nhttps://www.acwing.com/problem/content/2/"}
                     rows={12}
                     className={cn(
                       "mt-2 w-full resize-none rounded-xl bg-black/10 p-3 text-sm text-slate-200",
