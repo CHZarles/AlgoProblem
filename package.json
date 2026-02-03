@@ -21,10 +21,22 @@
   "build": {
     "appId": "com.algoworkspace.desktop",
     "productName": "AlgoWorkspace",
+    "compression": "maximum",
+    "afterPack": "scripts/electron-afterPack.cjs",
     "files": [
       "dist/**",
       "dist-electron/**",
-      "package.json"
+      "package.json",
+      "!**/*.map",
+      "!**/node_modules/**/{test,tests,__tests__,__mocks__}/**",
+      "!**/node_modules/**/{doc,docs}/**",
+      "!**/node_modules/**/{example,examples}/**",
+      "!**/node_modules/better-sqlite3/deps/**",
+      "!**/node_modules/better-sqlite3/src/**",
+      "!**/node_modules/better-sqlite3/benchmark/**",
+      "!**/node_modules/better-sqlite3/tools/**",
+      "!**/node_modules/better-sqlite3/*.md",
+      "!**/node_modules/better-sqlite3/LICENSE*"
     ],
     "asar": true,
     "directories": {
