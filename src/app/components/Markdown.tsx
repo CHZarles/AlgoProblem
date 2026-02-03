@@ -12,6 +12,8 @@ import { useTheme } from "../theme";
 
 type SanitizedPropertyDefinition = string | [string, ...Array<string | RegExp>];
 
+const IS_DEMO = import.meta.env.VITE_DEMO === "true";
+
 function formatCodeLanguageLabel(raw: string) {
   const lang = raw.trim().toLowerCase();
   if (!lang) return "";
@@ -57,12 +59,26 @@ const SANITIZE_SCHEMA = (() => {
   return { ...base, tagNames, attributes: attrs, protocols };
 })();
 
-function stripFrontmatter(markdown: string) {
+function splitFrontmatter(markdown: string): { meta: Record<string, string>; body: string } {
   const md = markdown.replace(/\r\n/g, "\n");
-  if (!md.startsWith("---\n")) return markdown;
+  if (!md.startsWith("---\n")) return { meta: {}, body: markdown };
   const end = md.indexOf("\n---\n", 4);
-  if (end === -1) return markdown;
-  return md.slice(end + "\n---\n".length).trimStart();
+  if (end === -1) return { meta: {}, body: markdown };
+
+  const metaRaw = md.slice("---\n".length, end).trim();
+  const meta: Record<string, string> = {};
+  for (const line of metaRaw.split("\n")) {
+    const m = line.match(/^\s*([A-Za-z0-9_]+)\s*:\s*(.*?)\s*$/);
+    if (!m) continue;
+    const key = m[1]!;
+    let value = m[2] ?? "";
+    if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    meta[key] = value;
+  }
+  const body = md.slice(end + "\n---\n".length).trimStart();
+  return { meta, body };
 }
 
 function stripOuterMarkdownFence(markdown: string) {
@@ -164,10 +180,35 @@ export function Markdown({
   onToggleTask?: (taskIndex: number, checked: boolean) => void;
 }) {
   const theme = useTheme();
-  const base = normalizeLatexInMath(normalizeBoldLabels(stripOuterMarkdownFence(stripFrontmatter(value))));
+  const fm = splitFrontmatter(value);
+  const canonicalUrl = (fm.meta.canonical_url || "").trim();
+  const baseUrl = canonicalUrl || undefined;
+  const base = normalizeLatexInMath(normalizeBoldLabels(stripOuterMarkdownFence(fm.body)));
   const normalized = mode === "statement" ? normalizeStatementLayout(base) : base;
   const isLight = theme.resolved === "light";
   let taskIndex = 0;
+  const toProxySrc = (rawSrc: string) => {
+    const src = (rawSrc || "").trim();
+    if (!src) return src;
+    if (src.startsWith("data:") || src.startsWith("blob:")) return src;
+    if (src.startsWith("/api/assets/proxy")) return src;
+
+    let resolved = src;
+    try {
+      if (src.startsWith("//")) resolved = `https:${src}`;
+      else if (!/^https?:\/\//i.test(src) && baseUrl) resolved = new URL(src, baseUrl).toString();
+    } catch {
+      resolved = src;
+    }
+
+    if (!/^https?:\/\//i.test(resolved)) return resolved;
+    if (IS_DEMO) return resolved;
+    const sp = new URLSearchParams();
+    sp.set("url", resolved);
+    if (canonicalUrl) sp.set("referer", canonicalUrl);
+    return `/api/assets/proxy?${sp.toString()}`;
+  };
+
   return (
     <div
       className={cn(
@@ -185,6 +226,10 @@ export function Markdown({
           a({ href, ...props }) {
             const isExternal = typeof href === "string" && /^https?:\/\//i.test(href);
             return <a href={href} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noreferrer" : undefined} {...props} />;
+          },
+          img({ src, ...props }) {
+            if (typeof src !== "string") return <img src={src} {...props} />;
+            return <img src={toProxySrc(src)} loading="lazy" {...props} />;
           },
           input({ type, checked, ...props }) {
             if (type !== "checkbox") return <input type={type} {...props} />;

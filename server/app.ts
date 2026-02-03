@@ -10,6 +10,7 @@ import { searchRoutes } from "./routes/searchRoutes";
 import { settingsRoutes } from "./routes/settingsRoutes";
 import { reviewRoutes } from "./routes/reviewRoutes";
 import { workspaceRoutes } from "./routes/workspaceRoutes";
+import { assetsRoutes } from "./routes/assetsRoutes";
 import path from "node:path";
 import fs from "node:fs";
 
@@ -36,6 +37,7 @@ export function createApp() {
   app.use("/api/search", searchRoutes());
   app.use("/api/settings", settingsRoutes());
   app.use("/api/workspace", workspaceRoutes());
+  app.use("/api/assets", assetsRoutes());
 
   if (process.env.NODE_ENV === "production") {
     const distDir = path.resolve(process.env.STATIC_DIR ?? path.resolve(process.cwd(), "dist"));
