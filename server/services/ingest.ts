@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { load } from "cheerio";
 import { htmlToMarkdown } from "./markdown";
+import https from "node:https";
+import zlib from "node:zlib";
 
 export type IngestPlatform = string;
 
@@ -165,49 +167,124 @@ async function fetchLeetCode(slug: string, prefer: "cn" | "com") {
   let lastStatus = 0;
   let lastContentType = "";
 
-	  for (const ep of endpoints) {
-	    const resp = await fetch(ep.api, {
-	      method: "POST",
-	      headers: {
-	        "content-type": "application/json",
-	        referer: ep.referer,
-	        // leetcode.cn may require browser-like UA for some regions; harmless for leetcode.com.
-	        "user-agent": "AlgoWorkspace/1.0",
-	      },
-	      body: JSON.stringify(payload),
-	      signal: timeoutSignal(15000),
-	    });
-    lastStatus = resp.status;
-    lastContentType = resp.headers.get("content-type") ?? "";
-    if (!resp.ok) continue;
+  const QuestionSchema = z.object({
+    data: z.object({
+      question: z
+        .object({
+          title: z.string(),
+          translatedTitle: z.string().nullable().optional(),
+          content: z.string().nullable().optional(),
+          translatedContent: z.string().nullable().optional(),
+          difficulty: z.string().nullable().optional(),
+          topicTags: z
+            .array(z.object({ name: z.string(), translatedName: z.string().nullable().optional() }))
+            .optional()
+            .default([]),
+        })
+        .nullable(),
+    }),
+  });
 
-    // If Cloudflare serves HTML (happens on leetcode.cn), treat as failure and fallback.
-    if (lastContentType.includes("text/html")) continue;
+  const postViaHttps = async (ep: { api: string; referer: string }, body: string) => {
+    return await new Promise<{ status: number; contentType: string; text: string }>((resolve, reject) => {
+      const u = new URL(ep.api);
+      const req = https.request(
+        {
+          protocol: u.protocol,
+          hostname: u.hostname,
+          port: u.port ? Number(u.port) : undefined,
+          path: `${u.pathname}${u.search}`,
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json, text/plain, */*",
+            "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+            referer: ep.referer,
+            origin: new URL(ep.referer).origin,
+            // leetcode.cn is sensitive to missing/blocked UA in some runtimes (e.g. Electron's fetch). Always set it here.
+            "user-agent": "AlgoWorkspace/1.0",
+            "accept-encoding": "gzip,deflate,br",
+            "content-length": Buffer.byteLength(body).toString(),
+          },
+        },
+        (res) => {
+          const status = res.statusCode ?? 0;
+          const contentType = String(res.headers["content-type"] ?? "");
+          const enc = String(res.headers["content-encoding"] ?? "");
+          const chunks: Buffer[] = [];
+          res.on("data", (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(String(c))));
+          res.on("end", () => {
+            const buf = Buffer.concat(chunks);
+            let out = buf;
+            try {
+              if (enc.includes("br")) out = zlib.brotliDecompressSync(buf);
+              else if (enc.includes("gzip")) out = zlib.gunzipSync(buf);
+              else if (enc.includes("deflate")) out = zlib.inflateSync(buf);
+            } catch {
+              out = buf;
+            }
+            resolve({ status, contentType, text: out.toString("utf8") });
+          });
+        },
+      );
 
-    const json = await resp.json().catch(() => null);
-    if (!json) continue;
-
-    const QuestionSchema = z.object({
-      data: z.object({
-        question: z
-          .object({
-            title: z.string(),
-            translatedTitle: z.string().nullable().optional(),
-            content: z.string().nullable().optional(),
-            translatedContent: z.string().nullable().optional(),
-            difficulty: z.string().nullable().optional(),
-            topicTags: z
-              .array(z.object({ name: z.string(), translatedName: z.string().nullable().optional() }))
-              .optional()
-              .default([]),
-          })
-          .nullable(),
-      }),
+      req.setTimeout(15_000, () => req.destroy(new Error("timeout")));
+      req.on("error", reject);
+      req.write(body);
+      req.end();
     });
-    const parsed = QuestionSchema.safeParse(json);
-    if (!parsed.success) continue;
-    if (!parsed.data.data.question) throw new Error("LeetCode 题目不存在或不可访问");
-    return parsed.data.data.question;
+  };
+
+  const body = JSON.stringify(payload);
+
+  for (const ep of endpoints) {
+    // 1) Try fetch() first (fast path).
+    try {
+      const resp = await fetch(ep.api, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/plain, */*",
+          "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+          referer: ep.referer,
+          origin: new URL(ep.referer).origin,
+          // leetcode.cn may require browser-like UA for some regions; harmless for leetcode.com.
+          "user-agent": "AlgoWorkspace/1.0",
+        },
+        body,
+        signal: timeoutSignal(15000),
+      });
+      lastStatus = resp.status;
+      lastContentType = resp.headers.get("content-type") ?? "";
+      if (resp.ok && !lastContentType.includes("text/html")) {
+        const json = await resp.json().catch(() => null);
+        if (json) {
+          const parsed = QuestionSchema.safeParse(json);
+          if (parsed.success) {
+            if (!parsed.data.data.question) throw new Error("LeetCode 题目不存在或不可访问");
+            return parsed.data.data.question;
+          }
+        }
+      }
+    } catch {
+      // ignore and fallback
+    }
+
+    // 2) Fallback: use Node https request so we can always set UA/referer even if fetch() blocks them (e.g. Electron).
+    try {
+      const r = await postViaHttps(ep, body);
+      lastStatus = r.status;
+      lastContentType = r.contentType;
+      if (r.status < 200 || r.status >= 300) continue;
+      if (r.contentType.includes("text/html")) continue;
+      const json = JSON.parse(r.text) as unknown;
+      const parsed = QuestionSchema.safeParse(json);
+      if (!parsed.success) continue;
+      if (!parsed.data.data.question) throw new Error("LeetCode 题目不存在或不可访问");
+      return parsed.data.data.question;
+    } catch {
+      continue;
+    }
   }
 
   if (lastContentType.includes("text/html")) throw new Error("抓取失败（可能被反爬/验证码）");
