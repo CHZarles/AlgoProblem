@@ -58,6 +58,9 @@ AlgoWorkspace 是一个本地优先的刷题工作台：把「题面 / 笔记 / 
   - Tab 缩进 / Shift+Tab 反缩进
   - Enter 自动续行：列表 / 任务清单（todo list）
   - GFM：任务清单、表格、删除线等（预览支持勾选任务）
+- **题面图片缓存（按需）**
+  - 渲染时将题面中的远程图片临时改写为本地代理地址（不修改入库 Markdown）
+  - 首次打开自动下载并缓存到本地；后续直接读取缓存（离线可用）
 - **主题**
   - 深色 / 浅色 / 秋天
 
@@ -115,6 +118,14 @@ npm run build
 npm run start
 ```
 
+## Desktop App（Electron / Windows）
+
+本项目也提供 Electron 桌面版（内置后端与 SQLite），适合本地长期使用。
+
+- 下载：GitHub Releases（安装包在 Release 附件中）
+- 本地开发启动：`npm run electron:dev`
+- 本地打包（Windows x64）：`npm run dist:win`
+
 ## Configuration（可选配置）
 
 ### LLM（可选）
@@ -135,7 +146,8 @@ npm run start
 ## Data & Backup
 
 - 本项目为**单体本地 Workspace**：数据默认存储在 `.data/`（已在 `.gitignore` 排除）
-- 备份建议：直接复制 `.data/` 目录
+- 图片缓存：与数据库同目录的 `assets/images/`（例如 `.data/assets/images/`）
+- 备份建议：直接复制数据库所在目录（默认 `.data/`），可同时包含图片缓存
 - Static Demo 的数据在浏览器侧（`localStorage`），可通过设置页导出/导入（JSON）
 
 ## Environment Variables（可选环境变量）
