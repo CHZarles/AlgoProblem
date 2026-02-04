@@ -902,31 +902,369 @@ export async function demoApiFetchBlob({ path }: DemoRequest): Promise<Blob> {
   }
   if (pathname === "/workspace/export-markdown") {
     const date = new Date().toISOString();
-    const lines: string[] = [];
-    lines.push(`# AlgoWorkspace Demo 导出（Markdown）`);
-    lines.push("");
-    lines.push(`- 导出时间：${date}`);
-    lines.push(`- 题目：${snapshot.problems.length} · 笔记：${snapshot.notes.length} · 题集：${snapshot.collections.length}`);
-    lines.push("");
-    lines.push("## 题集");
-    for (const c of snapshot.collections) {
-      lines.push(`- ${c.name}（${c.problemIds.length} 题）`);
-    }
-    lines.push("");
-    lines.push("## 笔记");
+    const { default: JSZip } = await import("jszip");
+    const zip = new JSZip();
+
+    const slugify = (input: string, maxLen = 72) => {
+      const s = (input ?? "")
+        .trim()
+        .normalize("NFKD")
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+      const out = s || "untitled";
+      return out.length > maxLen ? out.slice(0, maxLen).replace(/-+$/g, "") : out;
+    };
+
+    const mdEscapeText = (text: string) => (text ?? "").replace(/\[/g, "\\[").replace(/\]/g, "\\]");
+    const mdLink = (text: string, href: string) => `[${mdEscapeText(text)}](${href})`;
+    const yamlScalar = (v: unknown) => {
+      if (v === null || v === undefined) return "null";
+      if (typeof v === "number") return Number.isFinite(v) ? String(v) : "null";
+      if (typeof v === "boolean") return v ? "true" : "false";
+      return JSON.stringify(String(v));
+    };
+    const yamlFrontmatter = (obj: Record<string, unknown>) => {
+      const lines: string[] = [];
+      lines.push("---");
+      for (const [key, value] of Object.entries(obj)) {
+        if (Array.isArray(value)) {
+          lines.push(`${key}: ${value.length ? "" : "[]"}`.trimEnd());
+          if (value.length) for (const item of value) lines.push(`  - ${yamlScalar(item)}`);
+          continue;
+        }
+        lines.push(`${key}: ${yamlScalar(value)}`);
+      }
+      lines.push("---");
+      return lines.join("\n");
+    };
+
+    const problemById = new Map(snapshot.problems.map((p) => [p.id, p] as const));
+    const notesById = new Map(snapshot.notes.map((n) => [n.id, n] as const));
+    const solutionsById = new Map(snapshot.solutions.map((s) => [s.id, s] as const));
+    const collectionsById = new Map(snapshot.collections.map((c) => [c.id, c] as const));
+
+    const noteIdsByProblemId = new Map<string, string[]>();
     for (const n of snapshot.notes) {
-      lines.push(`- ${n.title} · ${n.kind} · 关联题目：${n.problemIds.length}`);
+      for (const pid of n.problemIds) {
+        if (!noteIdsByProblemId.has(pid)) noteIdsByProblemId.set(pid, []);
+        noteIdsByProblemId.get(pid)!.push(n.id);
+      }
     }
-    lines.push("");
-    lines.push("## 题目（题面预览）");
-    for (const p of snapshot.problems.slice(0, 8)) {
-      lines.push("");
-      lines.push(`### ${p.title}`);
-      lines.push("");
-      lines.push(p.markdown);
+
+    const solutionIdsByProblemId = new Map<string, string[]>();
+    for (const s of snapshot.solutions) {
+      if (!solutionIdsByProblemId.has(s.problemId)) solutionIdsByProblemId.set(s.problemId, []);
+      solutionIdsByProblemId.get(s.problemId)!.push(s.id);
     }
-    lines.push("");
-    return new Blob([lines.join("\n")], { type: "text/markdown" });
+
+    const collectionIdsByProblemId = new Map<string, string[]>();
+    for (const c of snapshot.collections) {
+      for (const pid of c.problemIds) {
+        if (!collectionIdsByProblemId.has(pid)) collectionIdsByProblemId.set(pid, []);
+        collectionIdsByProblemId.get(pid)!.push(c.id);
+      }
+    }
+
+    const problemPathById = new Map<string, string>();
+    for (const p of snapshot.problems) {
+      const pl = slugify((p.platform || "unknown").trim() || "unknown", 40);
+      const t = slugify(p.title || "untitled", 80);
+      problemPathById.set(p.id, `problems/${pl}/${t}__${p.id}.md`);
+    }
+
+    const notePathById = new Map<string, string>();
+    for (const n of snapshot.notes) {
+      const t = slugify(n.title || "untitled", 90);
+      notePathById.set(n.id, `notes/${n.id}__${t}.md`);
+    }
+
+    const solutionPathById = new Map<string, string>();
+    for (const s of snapshot.solutions) {
+      const lang = slugify(s.language || "unknown", 24);
+      const ver = slugify(s.version || "v1", 24);
+      solutionPathById.set(s.id, `solutions/${s.problemId}/${lang}__${ver}__${s.id}.md`);
+    }
+
+    const collectionPathById = new Map<string, string>();
+    for (const c of snapshot.collections) {
+      const t = slugify(c.name || "untitled", 90);
+      collectionPathById.set(c.id, `collections/${c.id}__${t}.md`);
+    }
+
+    const rel = (fromFilePath: string, toFilePath: string) => {
+      const fromDir = fromFilePath.split("/").slice(0, -1).join("/") || ".";
+      const fromParts = fromDir === "." ? [] : fromDir.split("/");
+      const toParts = toFilePath.split("/");
+      while (fromParts.length && toParts.length && fromParts[0] === toParts[0]) {
+        fromParts.shift();
+        toParts.shift();
+      }
+      const up = Array.from({ length: fromParts.length }).map(() => "..");
+      return [...up, ...toParts].join("/") || ".";
+    };
+
+    // Root README
+    {
+      const lines: string[] = [];
+      lines.push("# AlgoWorkspace Demo 导出（Markdown Bundle）");
+      lines.push("");
+      lines.push(`- exported_at: ${date}`);
+      lines.push(`- 题目：${snapshot.problems.length} · 笔记：${snapshot.notes.length} · 题解：${snapshot.solutions.length} · 题集：${snapshot.collections.length}`);
+      lines.push("");
+      lines.push("## 题集");
+      for (const c of snapshot.collections) {
+        const p = collectionPathById.get(c.id);
+        if (!p) continue;
+        lines.push(`- ${mdLink(c.name, p)} (${c.problemIds.length} 题)`);
+      }
+      lines.push("");
+      lines.push("## 笔记");
+      for (const n of snapshot.notes) {
+        const p = notePathById.get(n.id);
+        if (!p) continue;
+        lines.push(`- ${mdLink(n.title, p)} · ${n.kind} · 关联题目：${n.problemIds.length}`);
+      }
+      lines.push("");
+      lines.push("## 题解");
+      for (const s of snapshot.solutions) {
+        const p = solutionPathById.get(s.id);
+        if (!p) continue;
+        const prob = problemById.get(s.problemId);
+        lines.push(`- ${mdLink(`${s.title} · ${s.language} · ${s.version} · ${s.status}`, p)} · ${prob ? prob.title : s.problemId}`);
+      }
+      lines.push("");
+      lines.push("## 题目");
+      for (const p of snapshot.problems) {
+        const fp = problemPathById.get(p.id);
+        if (!fp) continue;
+        lines.push(`- ${mdLink(p.title, fp)} · ${p.difficulty} · ${p.status}`);
+      }
+      lines.push("");
+      zip.file("README.md", lines.join("\n") + "\n");
+    }
+
+    // Collections
+    for (const c of snapshot.collections) {
+      const filePath = collectionPathById.get(c.id);
+      if (!filePath) continue;
+      const fm = yamlFrontmatter({
+        type: "collection",
+        id: c.id,
+        exported_at: date,
+        name: c.name,
+        description: c.description ?? null,
+        plan_due_at: c.planDueAt ?? null,
+        plan_goal_problems_week: c.planGoalProblemsWeek ?? 0,
+        plan_goal_publishes_week: c.planGoalPublishesWeek ?? 0,
+        problem_ids: c.problemIds,
+        created_at: c.createdAt,
+        updated_at: c.updatedAt,
+      });
+      const lines: string[] = [];
+      lines.push(fm);
+      lines.push("");
+      lines.push(`# ${c.name}`);
+      lines.push("");
+      if (c.description?.trim()) {
+        lines.push(c.description.trim());
+        lines.push("");
+      }
+      lines.push("## 题目");
+      for (const pid of c.problemIds) {
+        const p = problemById.get(pid);
+        const pPath = problemPathById.get(pid);
+        const checked = p?.status === "done" ? "x" : " ";
+        if (!p || !pPath) {
+          lines.push(`- [${checked}] ${pid}`);
+          continue;
+        }
+        lines.push(`- [${checked}] ${mdLink(p.title, rel(filePath, pPath))} · ${p.platform} · ${p.difficulty}`);
+      }
+      lines.push("");
+      zip.file(filePath, lines.join("\n") + "\n");
+    }
+
+    // Notes
+    for (const n of snapshot.notes) {
+      const filePath = notePathById.get(n.id);
+      if (!filePath) continue;
+      const fm = yamlFrontmatter({
+        type: "note",
+        id: n.id,
+        exported_at: date,
+        kind: n.kind,
+        title: n.title,
+        tags: n.tags,
+        problem_ids: n.problemIds,
+        created_at: n.createdAt,
+        updated_at: n.updatedAt,
+      });
+      const lines: string[] = [];
+      lines.push(fm);
+      lines.push("");
+      lines.push(`# ${n.title}`);
+      lines.push("");
+      lines.push(n.body.trim() || "（空）");
+      lines.push("");
+      lines.push("## 关联题目");
+      for (const pid of n.problemIds) {
+        const p = problemById.get(pid);
+        const pPath = problemPathById.get(pid);
+        if (!p || !pPath) {
+          lines.push(`- ${pid}`);
+          continue;
+        }
+        lines.push(`- ${mdLink(p.title, rel(filePath, pPath))} · ${p.platform} · ${p.difficulty} · ${p.status}`);
+      }
+      lines.push("");
+      zip.file(filePath, lines.join("\n") + "\n");
+    }
+
+    // Solutions
+    for (const s of snapshot.solutions) {
+      const filePath = solutionPathById.get(s.id);
+      if (!filePath) continue;
+      const fm = yamlFrontmatter({
+        type: "solution",
+        id: s.id,
+        exported_at: date,
+        problem_id: s.problemId,
+        title: s.title,
+        language: s.language,
+        version: s.version,
+        status: s.status,
+        published_at: s.publishedAt ?? null,
+        time_complexity: s.timeComplexity ?? null,
+        space_complexity: s.spaceComplexity ?? null,
+        created_at: s.createdAt,
+        updated_at: s.updatedAt,
+      });
+      const lines: string[] = [];
+      lines.push(fm);
+      lines.push("");
+      lines.push(`# ${s.title}`);
+      lines.push("");
+      const prob = problemById.get(s.problemId);
+      const probPath = problemPathById.get(s.problemId);
+      if (prob && probPath) {
+        lines.push(`关联题目：${mdLink(prob.title, rel(filePath, probPath))}`);
+        lines.push("");
+      }
+      lines.push(s.body.trim() || "（空）");
+      lines.push("");
+      zip.file(filePath, lines.join("\n") + "\n");
+    }
+
+    // Problems
+    for (const p of snapshot.problems) {
+      const filePath = problemPathById.get(p.id);
+      if (!filePath) continue;
+      const relatedNoteIds = noteIdsByProblemId.get(p.id) ?? [];
+      const relatedSolutionIds = solutionIdsByProblemId.get(p.id) ?? [];
+      const relatedCollectionIds = collectionIdsByProblemId.get(p.id) ?? [];
+      const fm = yamlFrontmatter({
+        type: "problem",
+        id: p.id,
+        exported_at: date,
+        platform: p.platform,
+        title: p.title,
+        canonical_url: p.canonicalUrl,
+        source_url: p.sourceUrl,
+        external_id: p.externalId ?? null,
+        difficulty: p.difficulty,
+        difficulty_score: p.difficultyScore ?? null,
+        status: p.status,
+        completed_at: p.completedAt ?? null,
+        tags: p.tags,
+        collection_ids: relatedCollectionIds,
+        note_ids: relatedNoteIds,
+        solution_ids: relatedSolutionIds,
+        created_at: p.createdAt,
+        updated_at: p.updatedAt,
+        last_activity_at: p.lastActivityAt,
+      });
+      const lines: string[] = [];
+      lines.push(fm);
+      lines.push("");
+      lines.push(`# ${p.title}`);
+      lines.push("");
+      lines.push(`- platform: ${p.platform}`);
+      lines.push(`- canonical_url: ${p.canonicalUrl}`);
+      lines.push(`- difficulty: ${p.difficulty}${p.difficultyScore == null ? "" : ` (${p.difficultyScore})`}`);
+      lines.push(`- status: ${p.status}`);
+      lines.push("");
+      lines.push("## 题面");
+      lines.push("");
+      lines.push(p.markdown.trim() || "（题面为空）");
+      lines.push("");
+      lines.push("## 关联笔记");
+      if (!relatedNoteIds.length) {
+        lines.push("（无）");
+      } else {
+        for (const nid of relatedNoteIds) {
+          const n = notesById.get(nid);
+          const nPath = notePathById.get(nid);
+          if (!n || !nPath) continue;
+          lines.push(`- ${mdLink(n.title, rel(filePath, nPath))} · ${n.kind}`);
+        }
+      }
+      lines.push("");
+      lines.push("## 关联题解");
+      if (!relatedSolutionIds.length) {
+        lines.push("（无）");
+      } else {
+        for (const sid of relatedSolutionIds) {
+          const s = solutionsById.get(sid);
+          const sPath = solutionPathById.get(sid);
+          if (!s || !sPath) continue;
+          lines.push(`- ${mdLink(`${s.title} · ${s.language} · ${s.version} · ${s.status}`, rel(filePath, sPath))}`);
+        }
+      }
+      lines.push("");
+      lines.push("## 关联题集");
+      if (!relatedCollectionIds.length) {
+        lines.push("（无）");
+      } else {
+        for (const cid of relatedCollectionIds) {
+          const c = collectionsById.get(cid);
+          const cPath = collectionPathById.get(cid);
+          if (!c || !cPath) continue;
+          lines.push(`- ${mdLink(c.name, rel(filePath, cPath))}`);
+        }
+      }
+      lines.push("");
+      zip.file(filePath, lines.join("\n") + "\n");
+    }
+
+    const manifest = {
+      version: 1,
+      format: "markdown_bundle_v1",
+      exported_at: date,
+      counts: {
+        problems: snapshot.problems.length,
+        notes: snapshot.notes.length,
+        solutions: snapshot.solutions.length,
+        collections: snapshot.collections.length,
+      },
+      paths: {
+        problems: Object.fromEntries(Array.from(problemPathById.entries())),
+        notes: Object.fromEntries(Array.from(notePathById.entries())),
+        solutions: Object.fromEntries(Array.from(solutionPathById.entries())),
+        collections: Object.fromEntries(Array.from(collectionPathById.entries())),
+      },
+      links: {
+        note_problems: snapshot.notes.flatMap((n) => n.problemIds.map((pid) => ({ note_id: n.id, problem_id: pid }))),
+        collection_problems: snapshot.collections.flatMap((c) =>
+          c.problemIds.map((pid, idx) => ({ collection_id: c.id, problem_id: pid, position: idx })),
+        ),
+      },
+    };
+    zip.file("meta/manifest.json", JSON.stringify(manifest, null, 2) + "\n");
+
+    const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+    return blob;
   }
   throw new ApiError("not_found", 404);
 }

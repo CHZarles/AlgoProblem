@@ -87,20 +87,23 @@ export function workspaceRoutes() {
     return res.send(JSON.stringify(payload, null, 2));
   });
 
-  r.get("/export-markdown", (req, res) => {
-    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
-    const out = exportWorkspaceMarkdown(workspaceId);
-    const d = db();
-    d.prepare(
-      `INSERT INTO settings (workspace_id, key, value)
-       VALUES (?, 'workspace_last_backup_at', ?)
-       ON CONFLICT(workspace_id, key) DO UPDATE SET value = excluded.value`,
-    ).run(workspaceId, out.exportedAt);
-    const date = out.exportedAt.slice(0, 10);
-    res.setHeader("content-type", "text/markdown; charset=utf-8");
-    res.setHeader("content-disposition", `attachment; filename="algoworkspace-${date}.md"`);
-    res.setHeader("cache-control", "no-store");
-    return res.send(out.markdown);
+  r.get("/export-markdown", async (req, res, next) => {
+    try {
+      const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
+      const out = await exportWorkspaceMarkdown(workspaceId);
+      const d = db();
+      d.prepare(
+        `INSERT INTO settings (workspace_id, key, value)
+         VALUES (?, 'workspace_last_backup_at', ?)
+         ON CONFLICT(workspace_id, key) DO UPDATE SET value = excluded.value`,
+      ).run(workspaceId, out.exportedAt);
+      res.setHeader("content-type", "application/zip");
+      res.setHeader("content-disposition", `attachment; filename="${out.filename}"`);
+      res.setHeader("cache-control", "no-store");
+      return res.send(out.zip);
+    } catch (e) {
+      return next(e);
+    }
   });
 
   r.post("/import", (req, res) => {

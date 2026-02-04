@@ -400,7 +400,7 @@ export default function SettingsPage() {
       >
         <div className="text-sm font-semibold text-slate-200">备份与迁移</div>
         <div className="mt-1 text-sm text-slate-500">
-          导出/导入本地 Workspace（JSON）。也支持导出为 Markdown（可读版）。默认不包含 API Key / Cookie。
+          导出/导入本地 Workspace（JSON）。也支持导出为 Markdown（ZIP 多文件：题目/题集/笔记/题解）。默认不包含 API Key / Cookie。
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-black/10 px-3 py-2 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
@@ -448,7 +448,7 @@ export default function SettingsPage() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
-                  a.download = `algoworkspace-${date}.md`;
+                  a.download = `algoworkspace-${date}.zip`;
                   document.body.appendChild(a);
                   a.click();
                   a.remove();
@@ -463,7 +463,7 @@ export default function SettingsPage() {
                 }
               }}
             >
-              导出 Markdown
+              导出 Markdown（ZIP）
             </Button>
 
             <label className="inline-flex">
