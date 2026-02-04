@@ -896,7 +896,37 @@ export async function demoApiFetchBlob({ path }: DemoRequest): Promise<Blob> {
   ensureSeeded();
   const url = new URL(path.startsWith("/api") ? path : `/api${path}`, "https://demo.local");
   const pathname = url.pathname.replace(/^\/api/, "") || "/";
-  if (pathname !== "/workspace/export") throw new ApiError("not_found", 404);
   const snapshot = withDb((db) => db);
-  return new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+  if (pathname === "/workspace/export") {
+    return new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+  }
+  if (pathname === "/workspace/export-markdown") {
+    const date = new Date().toISOString();
+    const lines: string[] = [];
+    lines.push(`# AlgoWorkspace Demo 导出（Markdown）`);
+    lines.push("");
+    lines.push(`- 导出时间：${date}`);
+    lines.push(`- 题目：${snapshot.problems.length} · 笔记：${snapshot.notes.length} · 题集：${snapshot.collections.length}`);
+    lines.push("");
+    lines.push("## 题集");
+    for (const c of snapshot.collections) {
+      lines.push(`- ${c.name}（${c.problemIds.length} 题）`);
+    }
+    lines.push("");
+    lines.push("## 笔记");
+    for (const n of snapshot.notes) {
+      lines.push(`- ${n.title} · ${n.kind} · 关联题目：${n.problemIds.length}`);
+    }
+    lines.push("");
+    lines.push("## 题目（题面预览）");
+    for (const p of snapshot.problems.slice(0, 8)) {
+      lines.push("");
+      lines.push(`### ${p.title}`);
+      lines.push("");
+      lines.push(p.markdown);
+    }
+    lines.push("");
+    return new Blob([lines.join("\n")], { type: "text/markdown" });
+  }
+  throw new ApiError("not_found", 404);
 }

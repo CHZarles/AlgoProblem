@@ -363,6 +363,10 @@ export async function exportWorkspace(): Promise<Blob> {
   return apiFetchBlob("/workspace/export");
 }
 
+export async function exportWorkspaceMarkdown(): Promise<Blob> {
+  return apiFetchBlob("/workspace/export-markdown");
+}
+
 export async function importWorkspace(payload: unknown): Promise<{ ok: true; imported: { problems: number; notes: number; solutions: number; collections: number } }> {
   return apiFetch("/workspace/import", { method: "POST", body: JSON.stringify(payload) });
 }

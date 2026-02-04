@@ -4,6 +4,7 @@ import type { WorkspaceRequest } from "../http";
 import { requireWorkspace } from "../http";
 import { db } from "../db";
 import { nowIso } from "../ids";
+import { exportWorkspaceMarkdown } from "../services/exportMarkdown";
 
 type ExportPayloadV2 = {
   version: 2;
@@ -84,6 +85,22 @@ export function workspaceRoutes() {
     res.setHeader("content-type", "application/json; charset=utf-8");
     res.setHeader("content-disposition", `attachment; filename="algoworkspace-${date}.json"`);
     return res.send(JSON.stringify(payload, null, 2));
+  });
+
+  r.get("/export-markdown", (req, res) => {
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
+    const out = exportWorkspaceMarkdown(workspaceId);
+    const d = db();
+    d.prepare(
+      `INSERT INTO settings (workspace_id, key, value)
+       VALUES (?, 'workspace_last_backup_at', ?)
+       ON CONFLICT(workspace_id, key) DO UPDATE SET value = excluded.value`,
+    ).run(workspaceId, out.exportedAt);
+    const date = out.exportedAt.slice(0, 10);
+    res.setHeader("content-type", "text/markdown; charset=utf-8");
+    res.setHeader("content-disposition", `attachment; filename="algoworkspace-${date}.md"`);
+    res.setHeader("cache-control", "no-store");
+    return res.send(out.markdown);
   });
 
   r.post("/import", (req, res) => {
