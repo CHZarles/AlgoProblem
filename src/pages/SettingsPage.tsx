@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 import { Input } from "../app/components/Input";
 import { Button } from "../app/components/Button";
 import { cn } from "../lib/cn";
-import { exportWorkspace, exportWorkspaceMarkdown, getSettings, importWorkspace, patchSettings, testAcwing, testLlm } from "../api/client";
+import { exportWorkspaceMarkdown, getSettings, importWorkspace, patchSettings, testAcwing, testLlm } from "../api/client";
 import { useApiQuery } from "../api/hooks";
 import { ApiError } from "../api/http";
 import { useTheme, type ThemePreference } from "../app/theme";
@@ -400,7 +400,7 @@ export default function SettingsPage() {
       >
         <div className="text-sm font-semibold text-slate-200">备份与迁移</div>
         <div className="mt-1 text-sm text-slate-500">
-          导出/导入本地 Workspace（JSON）。也支持导出为 Markdown（ZIP 多文件：题目/题集/笔记/题解）。默认不包含 API Key / Cookie。
+          导入本地 Workspace（JSON）。导出为 Markdown（ZIP 多文件：题目/题集/笔记/题解）。默认不包含 API Key / Cookie。
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-black/10 px-3 py-2 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">
@@ -408,39 +408,6 @@ export default function SettingsPage() {
             最后备份：{q.data?.workspaceLastBackupAt ? new Date(q.data.workspaceLastBackupAt).toLocaleString() : "—"}
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              disabled={saving || importing}
-              onClick={async () => {
-                setSaving(true);
-                try {
-                  const blob = await exportWorkspace();
-                  const date = new Date().toISOString().slice(0, 10);
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `algoworkspace-${date}.json`;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  URL.revokeObjectURL(url);
-                  toast.success("已导出");
-                  q.reload();
-                } catch (e) {
-                  const err = e instanceof ApiError ? e : null;
-                  if (err?.status === 404) {
-                    toast.error("导出失败：后端缺少 /api/workspace/export-markdown（请重启服务端后重试）");
-                  } else {
-                    toast.error(err?.message ? `导出失败：${err.message}` : "导出失败");
-                  }
-                } finally {
-                  setSaving(false);
-                }
-              }}
-            >
-              导出 JSON
-            </Button>
-
             <Button
               variant="secondary"
               disabled={saving || importing}
@@ -461,7 +428,11 @@ export default function SettingsPage() {
                   q.reload();
                 } catch (e) {
                   const err = e instanceof ApiError ? e : null;
-                  toast.error(err?.message ? `导出失败：${err.message}` : "导出失败");
+                  if (err?.status === 404) {
+                    toast.error("导出失败：后端缺少 /api/workspace/export-markdown（请重启服务端后重试）");
+                  } else {
+                    toast.error(err?.message ? `导出失败：${err.message}` : "导出失败");
+                  }
                 } finally {
                   setSaving(false);
                 }

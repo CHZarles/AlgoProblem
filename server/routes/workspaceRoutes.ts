@@ -6,25 +6,6 @@ import { db } from "../db";
 import { nowIso } from "../ids";
 import { exportWorkspaceMarkdown } from "../services/exportMarkdown";
 
-type ExportPayloadV2 = {
-  version: 2;
-  exportedAt: string;
-  workspaceId: string;
-  tables: {
-    problems: Array<Record<string, unknown>>;
-    notes: Array<Record<string, unknown>>;
-    noteProblems: Array<Record<string, unknown>>;
-    solutions: Array<Record<string, unknown>>;
-    collections: Array<Record<string, unknown>>;
-    collectionProblems: Array<Record<string, unknown>>;
-    activities: Array<Record<string, unknown>>;
-    problemRelations: Array<Record<string, unknown>>;
-    settings: Array<{ key: string; value: string }>;
-  };
-};
-
-const SENSITIVE_SETTINGS = new Set(["llm_api_key", "acwing_cookie"]);
-
 function safeString(v: unknown) {
   return typeof v === "string" ? v : v == null ? "" : String(v);
 }
@@ -34,58 +15,11 @@ function safeNumber(v: unknown, fallback: number) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+const SENSITIVE_SETTINGS = new Set(["llm_api_key", "acwing_cookie"]);
+
 export function workspaceRoutes() {
   const r = Router();
   r.use(requireWorkspace);
-
-  r.get("/export", (req, res) => {
-    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
-    const d = db();
-    const exportedAt = nowIso();
-
-    const problems = d.prepare("SELECT * FROM problems WHERE workspace_id = ?").all(workspaceId) as Array<Record<string, unknown>>;
-    const notes = d.prepare("SELECT * FROM notes WHERE workspace_id = ?").all(workspaceId) as Array<Record<string, unknown>>;
-    const noteProblems = d
-      .prepare(
-        `SELECT np.*
-         FROM note_problems np
-         JOIN notes n ON n.id = np.note_id
-         WHERE n.workspace_id = ?`,
-      )
-      .all(workspaceId) as Array<Record<string, unknown>>;
-    const solutions = d.prepare("SELECT * FROM solutions WHERE workspace_id = ?").all(workspaceId) as Array<Record<string, unknown>>;
-    const collections = d.prepare("SELECT * FROM collections WHERE workspace_id = ?").all(workspaceId) as Array<Record<string, unknown>>;
-    const collectionProblems = d
-      .prepare("SELECT cp.* FROM collection_problems cp JOIN collections c ON c.id = cp.collection_id WHERE c.workspace_id = ?")
-      .all(workspaceId) as Array<Record<string, unknown>>;
-    const activities = d.prepare("SELECT * FROM activities WHERE workspace_id = ?").all(workspaceId) as Array<Record<string, unknown>>;
-    const problemRelations = d
-      .prepare("SELECT * FROM problem_relations WHERE workspace_id = ?")
-      .all(workspaceId) as Array<Record<string, unknown>>;
-
-    const settingsAll = d
-      .prepare("SELECT key, value FROM settings WHERE workspace_id = ?")
-      .all(workspaceId) as Array<{ key: string; value: string }>;
-    const settings = settingsAll.filter((s) => !SENSITIVE_SETTINGS.has(s.key));
-
-    d.prepare(
-      `INSERT INTO settings (workspace_id, key, value)
-       VALUES (?, 'workspace_last_backup_at', ?)
-       ON CONFLICT(workspace_id, key) DO UPDATE SET value = excluded.value`,
-    ).run(workspaceId, exportedAt);
-
-    const payload: ExportPayloadV2 = {
-      version: 2,
-      exportedAt,
-      workspaceId,
-      tables: { problems, notes, noteProblems, solutions, collections, collectionProblems, activities, problemRelations, settings },
-    };
-
-    const date = exportedAt.slice(0, 10);
-    res.setHeader("content-type", "application/json; charset=utf-8");
-    res.setHeader("content-disposition", `attachment; filename="algoworkspace-${date}.json"`);
-    return res.send(JSON.stringify(payload, null, 2));
-  });
 
   r.get("/export-markdown", async (req, res, next) => {
     try {

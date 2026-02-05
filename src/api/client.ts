@@ -359,10 +359,6 @@ export async function testAcwing(url: string): Promise<{ ok: true; title?: strin
   return apiFetch("/settings/test-acwing", { method: "POST", body: JSON.stringify({ url }) });
 }
 
-export async function exportWorkspace(): Promise<Blob> {
-  return apiFetchBlob("/workspace/export");
-}
-
 export async function exportWorkspaceMarkdown(): Promise<Blob> {
   return apiFetchBlob("/workspace/export-markdown");
 }

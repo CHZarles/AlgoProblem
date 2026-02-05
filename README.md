@@ -148,10 +148,9 @@ npm run start
 - 本项目为**单体本地 Workspace**：数据默认存储在 `.data/`（已在 `.gitignore` 排除）
 - 图片缓存：与数据库同目录的 `assets/images/`（例如 `.data/assets/images/`）
 - 备份建议：直接复制数据库所在目录（默认 `.data/`），可同时包含图片缓存
-- 设置页支持两种导出：
-  - JSON（用于完整迁移/恢复）
-  - Markdown Bundle（`zip` 多文件：题目/题集/笔记/题解 + `meta/manifest.json`；不包含活动/设置/密钥）
-- Static Demo 的数据在浏览器侧（`localStorage`），可通过设置页导出/导入（JSON）
+- 设置页支持导出：Markdown Bundle（`zip` 多文件：题目/题集/笔记/题解 + `meta/manifest.json`；不包含活动/设置/密钥）
+- 设置页支持导入：JSON Workspace（用于迁移/恢复；不会覆盖 API Key / Cookie）
+- Static Demo 的数据在浏览器侧（`localStorage`），可通过设置页导出（Markdown Bundle）/ 导入（JSON）
 
 ## Environment Variables（可选环境变量）
 

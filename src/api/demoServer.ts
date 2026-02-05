@@ -897,9 +897,6 @@ export async function demoApiFetchBlob({ path }: DemoRequest): Promise<Blob> {
   const url = new URL(path.startsWith("/api") ? path : `/api${path}`, "https://demo.local");
   const pathname = url.pathname.replace(/^\/api/, "") || "/";
   const snapshot = withDb((db) => db);
-  if (pathname === "/workspace/export") {
-    return new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
-  }
   if (pathname === "/workspace/export-markdown") {
     const date = new Date().toISOString();
     const { default: JSZip } = await import("jszip");
