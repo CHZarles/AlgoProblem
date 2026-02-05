@@ -442,6 +442,7 @@ function SolutionEditor({
             minRows={16}
             mode="split"
             showModeSwitch={false}
+            enableImagePaste
           />
         </>
       )}

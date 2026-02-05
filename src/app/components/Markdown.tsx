@@ -192,6 +192,7 @@ export function Markdown({
     if (!src) return src;
     if (src.startsWith("data:") || src.startsWith("blob:")) return src;
     if (src.startsWith("/api/assets/proxy")) return src;
+    if (src.startsWith("/api/assets/local/")) return src;
 
     let resolved = src;
     try {

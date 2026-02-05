@@ -184,6 +184,7 @@ function NoteEditor({
           minRows={18}
           mode="split"
           showModeSwitch={false}
+          enableImagePaste
         />
       ) : (
         <div className="rounded-2xl bg-white/3 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">

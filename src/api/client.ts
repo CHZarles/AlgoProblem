@@ -1,11 +1,54 @@
 import type { Activity, Collection, Note, Problem, Solution } from "../types/model";
-import { apiFetch, apiFetchBlob } from "./http";
+import { ApiError, apiFetch, apiFetchBlob } from "./http";
+
+const IS_DEMO = import.meta.env.VITE_DEMO === "true";
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read_failed"));
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.readAsDataURL(file);
+  });
+}
 
 export type SearchResult = {
   problems: Array<Pick<Problem, "id" | "platform" | "externalId" | "canonicalUrl" | "title" | "tags">>;
   notes: Array<Pick<Note, "id" | "kind" | "problemIds" | "title" | "tags">>;
   solutions: Array<Pick<Solution, "id" | "problemId" | "title" | "language" | "version" | "status">>;
 };
+
+export async function uploadPastedImage(file: File): Promise<{ url: string; filename?: string }> {
+  if (IS_DEMO) {
+    const url = await readFileAsDataUrl(file);
+    return { url };
+  }
+
+  const resp = await fetch("/api/assets/paste", {
+    method: "POST",
+    body: file,
+    headers: {
+      "content-type": file.type || "application/octet-stream",
+    },
+    credentials: "include",
+  });
+
+  const contentType = resp.headers.get("content-type") ?? "";
+  const isJson = contentType.includes("application/json");
+  const body = isJson ? await resp.json().catch(() => undefined) : await resp.text().catch(() => undefined);
+  if (!resp.ok) {
+    const msg =
+      body && typeof body === "object" && "error" in body && typeof (body as { error?: unknown }).error === "string"
+        ? String((body as { error?: unknown }).error)
+        : "api_error";
+    throw new ApiError(msg, resp.status, body);
+  }
+
+  if (!body || typeof body !== "object" || !("url" in body)) throw new ApiError("api_error", 500, body);
+  const url = String((body as { url: unknown }).url ?? "");
+  const filename = "filename" in body ? String((body as { filename: unknown }).filename ?? "") : undefined;
+  return { url, filename: filename || undefined };
+}
 
 export async function searchAll(q: string): Promise<SearchResult> {
   const sp = new URLSearchParams();

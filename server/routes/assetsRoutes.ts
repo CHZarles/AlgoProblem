@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import crypto from "node:crypto";
 import dns from "node:dns/promises";
 import fs from "node:fs";
@@ -30,6 +30,10 @@ function sha256Hex(input: string) {
   return crypto.createHash("sha256").update(input).digest("hex");
 }
 
+function sha256HexBytes(input: Buffer) {
+  return crypto.createHash("sha256").update(input).digest("hex");
+}
+
 function extFromContentType(raw: string) {
   const ct = raw.split(";")[0]?.trim().toLowerCase() ?? "";
   if (ct === "image/png") return "png";
@@ -42,6 +46,58 @@ function extFromContentType(raw: string) {
   if (ct === "image/bmp") return "bmp";
   if (ct === "image/x-icon") return "ico";
   return "bin";
+}
+
+function sniffImageContentType(bytes: Buffer): string | null {
+  if (bytes.length >= 8) {
+    // PNG: 89 50 4E 47 0D 0A 1A 0A
+    if (
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47 &&
+      bytes[4] === 0x0d &&
+      bytes[5] === 0x0a &&
+      bytes[6] === 0x1a &&
+      bytes[7] === 0x0a
+    ) {
+      return "image/png";
+    }
+
+    // GIF: GIF87a / GIF89a
+    const gifSig = bytes.subarray(0, 6).toString("ascii");
+    if (gifSig === "GIF87a" || gifSig === "GIF89a") return "image/gif";
+  }
+
+  // JPEG: FF D8 FF
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+
+  // WebP: RIFF....WEBP
+  if (
+    bytes.length >= 12 &&
+    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+    bytes.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "image/webp";
+  }
+
+  // BMP: BM
+  if (bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x4d) return "image/bmp";
+
+  // ICO/CUR: 00 00 01 00 / 00 00 02 00
+  if (bytes.length >= 4 && bytes[0] === 0x00 && bytes[1] === 0x00 && (bytes[2] === 0x01 || bytes[2] === 0x02) && bytes[3] === 0x00) {
+    return "image/x-icon";
+  }
+
+  // SVG: best-effort sniff (clipboard might provide text/xml or octet-stream)
+  try {
+    const head = bytes.subarray(0, 512).toString("utf8").trimStart();
+    if (head.startsWith("<svg") || (head.startsWith("<?xml") && head.includes("<svg"))) return "image/svg+xml";
+  } catch {
+    // ignore
+  }
+
+  return null;
 }
 
 function isPrivateIpv4(ip: string) {
@@ -148,9 +204,78 @@ function assetsRootDir(workspaceId: string) {
   return path.join(dataDir, "assets", "images", workspaceId);
 }
 
+function contentTypeFromExt(ext: string) {
+  const e = ext.trim().toLowerCase();
+  if (e === "png") return "image/png";
+  if (e === "jpg" || e === "jpeg") return "image/jpeg";
+  if (e === "gif") return "image/gif";
+  if (e === "webp") return "image/webp";
+  if (e === "avif") return "image/avif";
+  if (e === "svg") return "image/svg+xml";
+  if (e === "bmp") return "image/bmp";
+  if (e === "ico") return "image/x-icon";
+  return "application/octet-stream";
+}
+
 export function assetsRoutes() {
   const r = Router();
   r.use(requireWorkspace);
+
+  r.post(
+    "/paste",
+    express.raw({
+      type: () => true,
+      limit: "10mb",
+    }),
+    (req, res) => {
+      const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
+      const bytes = req.body;
+      if (!Buffer.isBuffer(bytes)) return res.status(400).json({ error: "invalid_body" });
+      if (!bytes.length) return res.status(400).json({ error: "empty" });
+
+      let contentType = String(req.headers["content-type"] ?? "").trim().toLowerCase();
+      if (!contentType.startsWith("image/")) {
+        const sniffed = sniffImageContentType(bytes);
+        if (!sniffed) return res.status(400).json({ error: "invalid_content_type" });
+        contentType = sniffed;
+      }
+
+      const dir = assetsRootDir(workspaceId);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+      const ext = extFromContentType(contentType);
+      const hash = sha256HexBytes(bytes);
+      const key = `p-${hash}`;
+      const filename = `${key}.${ext}`;
+      const filePath = path.join(dir, filename);
+      if (!fs.existsSync(filePath)) {
+        const tmpPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+        fs.writeFileSync(tmpPath, bytes);
+        fs.renameSync(tmpPath, filePath);
+      }
+      return res.json({ ok: true, filename, url: `/api/assets/local/${filename}` });
+    },
+  );
+
+  r.get("/local/:filename", (req, res) => {
+    const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
+    const filename = String(req.params.filename ?? "").trim();
+    if (!/^p-[a-f0-9]{64}\.[a-z0-9]{1,8}$/i.test(filename)) return res.status(400).json({ error: "invalid_filename" });
+
+    const dir = assetsRootDir(workspaceId);
+    const filePath = path.join(dir, filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: "not_found" });
+
+    const ext = filename.split(".").pop() ?? "";
+    res.setHeader("content-type", contentTypeFromExt(ext));
+    res.setHeader("cache-control", "public, max-age=31536000, immutable");
+    fs.createReadStream(filePath)
+      .on("error", () => {
+        if (!res.headersSent) res.status(500).end();
+        else res.end();
+      })
+      .pipe(res);
+  });
 
   r.get("/proxy", async (req, res) => {
     const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
@@ -180,7 +305,7 @@ export function assetsRoutes() {
 
       res.setHeader("content-type", meta.contentType || "application/octet-stream");
       res.setHeader("cache-control", "public, max-age=31536000, immutable");
-      res.setHeader("etag", `W/\"${key}\"`);
+      res.setHeader("etag", `W/"${key}"`);
       fs.createReadStream(filePath)
         .on("error", () => {
           if (!res.headersSent) res.status(500).end();
@@ -242,4 +367,3 @@ export function assetsRoutes() {
 
   return r;
 }
-

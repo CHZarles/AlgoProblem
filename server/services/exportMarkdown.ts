@@ -1,6 +1,8 @@
+import fs from "node:fs";
 import path from "node:path";
 import JSZip from "jszip";
 import { db } from "../db";
+import { env } from "../env";
 import { nowIso } from "../ids";
 
 type ProblemRow = {
@@ -127,6 +129,12 @@ function rel(fromFilePath: string, toFilePath: string) {
   const fromDir = path.posix.dirname(fromFilePath);
   const r = path.posix.relative(fromDir, toFilePath) || ".";
   return r.replace(/\\/g, "/");
+}
+
+function localAssetsDir(workspaceId: string) {
+  const e = env();
+  const dataDir = path.resolve(path.dirname(e.DATABASE_PATH));
+  return path.join(dataDir, "assets", "images", workspaceId);
 }
 
 type ExportMarkdownBundle = {
@@ -262,6 +270,19 @@ export async function exportWorkspaceMarkdown(workspaceId: string): Promise<Expo
   }
 
   const zip = new JSZip();
+  const referencedLocalImages = new Set<string>();
+
+  const rewriteLocalAssetLinks = (markdown: string, fromFilePath: string) => {
+    return markdown.replace(/\/api\/assets\/local\/(p-[a-f0-9]{64}\.[a-z0-9]{1,8})/gi, (_m, filename: string) => {
+      referencedLocalImages.add(filename);
+      return rel(fromFilePath, `assets/images/${filename}`);
+    });
+  };
+
+  const writeMarkdown = (filePath: string, content: string) => {
+    const rewritten = rewriteLocalAssetLinks(content, filePath);
+    zip.file(filePath, rewritten);
+  };
 
   const manifest = {
     version: 1,
@@ -360,7 +381,7 @@ export async function exportWorkspaceMarkdown(workspaceId: string): Promise<Expo
     }
     lines.push("");
 
-    zip.file("README.md", lines.join("\n") + "\n");
+    writeMarkdown("README.md", lines.join("\n") + "\n");
   }
 
   // Collections
@@ -411,7 +432,7 @@ export async function exportWorkspaceMarkdown(workspaceId: string): Promise<Expo
       }
       lines.push("");
     }
-    zip.file(filePath, lines.join("\n") + "\n");
+    writeMarkdown(filePath, lines.join("\n") + "\n");
   }
 
   // Notes
@@ -461,7 +482,7 @@ export async function exportWorkspaceMarkdown(workspaceId: string): Promise<Expo
       }
       lines.push("");
     }
-    zip.file(filePath, lines.join("\n") + "\n");
+    writeMarkdown(filePath, lines.join("\n") + "\n");
   }
 
   // Solutions
@@ -500,7 +521,7 @@ export async function exportWorkspaceMarkdown(workspaceId: string): Promise<Expo
     const body = (s.body ?? "").trim();
     lines.push(body || "（空）");
     lines.push("");
-    zip.file(filePath, lines.join("\n") + "\n");
+    writeMarkdown(filePath, lines.join("\n") + "\n");
   }
 
   // Problems
@@ -614,10 +635,34 @@ export async function exportWorkspaceMarkdown(workspaceId: string): Promise<Expo
       lines.push("");
     }
 
-    zip.file(filePath, lines.join("\n") + "\n");
+    writeMarkdown(filePath, lines.join("\n") + "\n");
   }
 
-  zip.file("meta/manifest.json", JSON.stringify(manifest, null, 2) + "\n");
+  zip.file(
+    "meta/manifest.json",
+    JSON.stringify(
+      {
+        ...manifest,
+        assets: {
+          local_images: Array.from(referencedLocalImages.values()).sort(),
+        },
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+
+  // Include pasted local images referenced by markdown (best-effort).
+  const localDir = localAssetsDir(workspaceId);
+  for (const filename of referencedLocalImages) {
+    const diskPath = path.join(localDir, filename);
+    if (!fs.existsSync(diskPath)) continue;
+    try {
+      zip.file(`assets/images/${filename}`, fs.readFileSync(diskPath));
+    } catch {
+      // ignore best-effort asset read failures
+    }
+  }
 
   const zipBuf = await zip.generateAsync({
     type: "nodebuffer",
