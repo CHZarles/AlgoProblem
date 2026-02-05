@@ -428,7 +428,11 @@ export default function SettingsPage() {
                   q.reload();
                 } catch (e) {
                   const err = e instanceof ApiError ? e : null;
-                  toast.error(err?.message ? `导出失败：${err.message}` : "导出失败");
+                  if (err?.status === 404) {
+                    toast.error("导出失败：后端缺少 /api/workspace/export-markdown（请重启服务端后重试）");
+                  } else {
+                    toast.error(err?.message ? `导出失败：${err.message}` : "导出失败");
+                  }
                 } finally {
                   setSaving(false);
                 }
