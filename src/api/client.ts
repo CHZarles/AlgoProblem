@@ -225,11 +225,10 @@ export async function createSolution(
     | "title"
     | "language"
     | "version"
-    | "status"
     | "timeComplexity"
     | "spaceComplexity"
     | "body"
-  >,
+  > & { status?: Solution["status"] },
 ) {
   return apiFetch<{ id: string }>("/solutions", { method: "POST", body: JSON.stringify(input) });
 }

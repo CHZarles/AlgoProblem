@@ -627,7 +627,8 @@ export async function demoApiFetch<T>({ path, init }: DemoRequest): Promise<T> {
       title: String(input.title ?? "题解").trim() || "题解",
       language: String(input.language ?? "cpp"),
       version: (input.version ?? "first") as any,
-      status: (input.status ?? "draft") as any,
+      status: "done",
+      publishedAt: ts,
       timeComplexity: input.timeComplexity ?? undefined,
       spaceComplexity: input.spaceComplexity ?? undefined,
       body: String(input.body ?? ""),
@@ -637,6 +638,7 @@ export async function demoApiFetch<T>({ path, init }: DemoRequest): Promise<T> {
     withDb((db) => {
       db.solutions.unshift(s);
       addActivity("solution_created", { problemId: s.problemId, objectId: s.id });
+      addActivity("solution_published", { problemId: s.problemId, objectId: s.id });
     });
     return { id: s.id } as unknown as T;
   }
@@ -651,7 +653,11 @@ export async function demoApiFetch<T>({ path, init }: DemoRequest): Promise<T> {
       if (typeof patch.title === "string") s.title = patch.title;
       if (typeof patch.language === "string") s.language = patch.language;
       if (typeof patch.version === "string") s.version = patch.version;
-      if (typeof patch.status === "string") s.status = patch.status;
+      if (s.status !== "done") s.status = "done";
+      if (!s.publishedAt) {
+        s.publishedAt = nowIso();
+        addActivity("solution_published", { problemId: s.problemId, objectId: s.id });
+      }
       if (typeof patch.timeComplexity === "string" || patch.timeComplexity === null) s.timeComplexity = patch.timeComplexity ?? undefined;
       if (typeof patch.spaceComplexity === "string" || patch.spaceComplexity === null) s.spaceComplexity = patch.spaceComplexity ?? undefined;
       if (typeof patch.body === "string") s.body = patch.body;

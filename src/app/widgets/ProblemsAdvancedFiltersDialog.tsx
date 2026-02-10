@@ -112,7 +112,7 @@ export function ProblemsAdvancedFiltersDialog({
           <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
             <div>
               <div className="text-sm font-semibold text-slate-200">高级筛选</div>
-              <div className="mt-1 text-sm text-slate-500">用于补充题库顶部的快捷筛选（例如：无已发布题解 / 有无笔记 / 题集）。</div>
+              <div className="mt-1 text-sm text-slate-500">用于补充题库顶部的快捷筛选（例如：无题解 / 有无笔记 / 题集）。</div>
             </div>
             <Dialog.Close asChild>
               <button className="rounded-lg px-2 py-1 text-sm text-slate-400 hover:bg-white/6">关闭</button>
@@ -225,13 +225,13 @@ export function ProblemsAdvancedFiltersDialog({
                     active={draft.hasSolution === true}
                     onClick={() => setDraft((d) => ({ ...d, hasSolution: true }))}
                   >
-                    已发布题解
+                    有题解
                   </Chip>
                   <Chip
                     active={draft.hasSolution === false}
                     onClick={() => setDraft((d) => ({ ...d, hasSolution: false }))}
                   >
-                    无已发布题解
+                    无题解
                   </Chip>
                 </div>
               </div>

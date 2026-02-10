@@ -1,6 +1,6 @@
 import { ExternalLink, FolderPlus, PanelLeftClose, PanelLeftOpen, Plus, RefreshCcw } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import type { Difficulty, ProblemStatus, Solution } from "../types/model";
@@ -28,6 +28,7 @@ import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 import { AddToCollectionDialog } from "../app/widgets/AddToCollectionDialog";
 import { cn } from "../lib/cn";
 import { useApiQuery, useDebouncedCallback } from "../api/hooks";
+import { detectSolutionLanguage } from "../lib/detectSolutionLanguage";
 
 function statusLabel(s: ProblemStatus) {
   switch (s) {
@@ -247,20 +248,17 @@ function SolutionEditor({
   solution,
   onSave,
   onDirtyChange,
-  onPublish,
-  onUnpublish,
   onDelete,
+  defaultEditing = false,
 }: {
   solution: Solution;
   onSave: (patch: Pick<Solution, "title" | "language" | "timeComplexity" | "spaceComplexity" | "body">) => Promise<void>;
   onDirtyChange?: (dirty: boolean) => void;
-  onPublish: () => Promise<void>;
-  onUnpublish: () => Promise<void>;
   onDelete: () => Promise<void>;
+  defaultEditing?: boolean;
 }) {
   const [title, setTitle] = useState(solution.title);
   const [language, setLanguage] = useState(solution.language);
-  const [status, setStatus] = useState(solution.status);
   const [time, setTime] = useState(solution.timeComplexity ?? "");
   const [space, setSpace] = useState(solution.spaceComplexity ?? "");
   const [body, setBody] = useState(solution.body);
@@ -269,9 +267,10 @@ function SolutionEditor({
   const [baseTime, setBaseTime] = useState(solution.timeComplexity ?? "");
   const [baseSpace, setBaseSpace] = useState(solution.spaceComplexity ?? "");
   const [baseBody, setBaseBody] = useState(solution.body);
-  const [publishing, setPublishing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(defaultEditing);
+  const titleRef = useRef<HTMLInputElement | null>(null);
+  const languageLockedRef = useRef(false);
 
   const languageOptions = [
     { value: "cpp", label: "C++" },
@@ -297,8 +296,14 @@ function SolutionEditor({
   }, [dirty, onDirtyChange]);
 
   useEffect(() => {
-    setStatus(solution.status);
-  }, [solution.status]);
+    if (!editing) return;
+    const el = titleRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(0, el.value.length);
+    });
+  }, [editing]);
 
   return (
     <div className="space-y-3">
@@ -310,7 +315,6 @@ function SolutionEditor({
               <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">
                 {language.toUpperCase()} · {solution.version}
               </span>
-              <Badge tone={status === "done" ? "easy" : "neutral"}>{status === "done" ? "已发布" : "草稿"}</Badge>
               {(time.trim() || space.trim()) ? (
                 <span className="truncate">
                   {time.trim() ? `时间 ${time.trim()}` : null}
@@ -324,52 +328,11 @@ function SolutionEditor({
             <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
               编辑
             </Button>
-            {status === "done" ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={publishing || saving}
-                onClick={async () => {
-                  setPublishing(true);
-                  try {
-                    await onUnpublish();
-                    setStatus("draft");
-                    toast.success("已撤回为草稿");
-                  } catch {
-                    toast.error("操作失败");
-                  } finally {
-                    setPublishing(false);
-                  }
-                }}
-              >
-                撤回
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={publishing || saving}
-                onClick={async () => {
-                  setPublishing(true);
-                  try {
-                    await onPublish();
-                    setStatus("done");
-                    toast.success("已发布题解");
-                  } catch {
-                    toast.error("发布失败");
-                  } finally {
-                    setPublishing(false);
-                  }
-                }}
-              >
-                发布
-              </Button>
-            )}
             <Button
               variant="ghost"
               size="sm"
               className="text-rose-300 hover:bg-rose-500/10 hover:text-rose-300"
-              disabled={publishing || saving}
+              disabled={saving}
               onClick={async () => {
                 const ok = window.confirm("确认删除该题解？");
                 if (!ok) return;
@@ -390,6 +353,7 @@ function SolutionEditor({
           <div className="grid grid-cols-12 gap-2">
             <div className="col-span-6">
               <Input
+                ref={titleRef}
                 value={title}
                 onChange={(e) => {
                   setTitle(e.target.value);
@@ -402,12 +366,13 @@ function SolutionEditor({
                 value={language}
                 options={languageOptions}
                 onChange={(v) => {
+                  languageLockedRef.current = true;
                   setLanguage(v);
                 }}
               />
             </div>
             <div className="col-span-3 flex items-center justify-end">
-              <Badge tone={status === "done" ? "easy" : "neutral"}>{status === "done" ? "已发布" : "草稿"}</Badge>
+              <div className="text-xs text-slate-500">{solution.version}</div>
             </div>
           </div>
 
@@ -435,6 +400,10 @@ function SolutionEditor({
           <MarkdownEditor
             value={body}
             onChange={(v) => {
+              if (!languageLockedRef.current) {
+                const detected = detectSolutionLanguage(v);
+                if (detected && detected !== language) setLanguage(detected);
+              }
               setBody(v);
             }}
             placeholder="按模板写清楚：思路/复杂度/代码/易错点/相似题"
@@ -461,7 +430,7 @@ function SolutionEditor({
             <Button
               size="sm"
               variant="secondary"
-              disabled={saving || publishing}
+              disabled={saving}
               onClick={() => {
                 if (dirty) {
                   const ok = window.confirm("有未保存修改，确认丢弃？");
@@ -480,7 +449,7 @@ function SolutionEditor({
             <Button
               size="sm"
               variant="primary"
-              disabled={!dirty || saving || publishing}
+              disabled={!dirty || saving}
               onClick={async () => {
                 const trimmed = title.trim();
                 if (!trimmed) return toast.error("标题不能为空");
@@ -538,6 +507,7 @@ export default function ProblemDetailPage() {
   const activeNote = notes.find((n) => n.id === noteId) ?? notes[0] ?? null;
 
   const [solutionId, setSolutionId] = useState<string | null>(null);
+  const [autoEditSolutionId, setAutoEditSolutionId] = useState<string | null>(null);
   const activeSolution = solutions.find((s) => s.id === solutionId) ?? solutions[0] ?? null;
   const [solutionDirty, setSolutionDirty] = useState(false);
   const [focusNotes, setFocusNotes] = useState(false);
@@ -548,6 +518,13 @@ export default function ProblemDetailPage() {
   const [statementFrontmatter, setStatementFrontmatter] = useState("");
   const [statementBase, setStatementBase] = useState("");
   const [savingStatement, setSavingStatement] = useState(false);
+
+  useEffect(() => {
+    if (!autoEditSolutionId) return;
+    if (activeSolution?.id !== autoEditSolutionId) return;
+    const t = window.setTimeout(() => setAutoEditSolutionId(null), 0);
+    return () => window.clearTimeout(t);
+  }, [activeSolution?.id, autoEditSolutionId]);
 
   const statementDirty = useMemo(() => {
     if (!editingStatement) return false;
@@ -599,15 +576,16 @@ export default function ProblemDetailPage() {
       title: seed?.title ?? "题解",
       language: seed?.language ?? "cpp",
       version: seed?.version ?? "first",
-      status: seed?.status ?? "draft",
       timeComplexity: seed?.timeComplexity,
       spaceComplexity: seed?.spaceComplexity,
       body:
         seed?.body ??
-        `## 思路\n\n## 复杂度\n- 时间：\n- 空间：\n\n## 代码\n\`\`\`${seed?.language ?? "cpp"}\n\n\`\`\`\n`,
+        `## 思路\n\n## 复杂度\n- 时间：\n- 空间：\n\n## 代码\n\`\`\`\n\n\`\`\`\n`,
     })
       .then(({ id }) => {
-        toast.success("已创建题解草稿");
+        toast.success("已创建题解");
+        setSolutionDirty(false);
+        setAutoEditSolutionId(id);
         detail.reload();
         setSolutionId(id);
       })
@@ -940,7 +918,7 @@ export default function ProblemDetailPage() {
 
                 <Tabs.Content value="solutions">
                   <div className="mb-3 flex items-center justify-between gap-2">
-                    <div className="text-xs text-slate-500">题解：草稿 → 发布（用于题库标记与统计）</div>
+                    <div className="text-xs text-slate-500">题解：保存即生效（用于题库标记与统计）</div>
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="secondary" onClick={() => onCreateSolution()}>
                         <Plus className="h-4 w-4" />
@@ -982,7 +960,7 @@ export default function ProblemDetailPage() {
                               >
                                 <div className="truncate text-sm text-slate-200">{s.title}</div>
                                 <div className="mt-0.5 truncate text-xs text-slate-500">
-                                  {s.language.toUpperCase()} · {s.version} · {s.status === "done" ? "已发布" : "草稿"}
+                                  {s.language.toUpperCase()} · {s.version}
                                 </div>
                               </button>
                               );
@@ -1001,6 +979,7 @@ export default function ProblemDetailPage() {
 	                        <SolutionEditor
 	                          key={activeSolution.id}
 	                          solution={activeSolution}
+                            defaultEditing={activeSolution.id === autoEditSolutionId}
 	                          onDirtyChange={setSolutionDirty}
 	                          onSave={async (patch) => {
 	                            await patchSolution(activeSolution.id, patch);
@@ -1012,8 +991,6 @@ export default function ProblemDetailPage() {
                               setSolutionDirty(false);
                               detail.reload();
                             }}
-	                          onPublish={() => patchSolution(activeSolution.id, { status: "done" }).then(() => detail.reload())}
-	                          onUnpublish={() => patchSolution(activeSolution.id, { status: "draft" }).then(() => detail.reload())}
 	                        />
 	                      ) : (
                         <div className="rounded-2xl bg-black/10 p-4 text-sm text-slate-500 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]">

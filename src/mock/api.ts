@@ -243,11 +243,10 @@ export function upsertSolution(
     | "title"
     | "language"
     | "version"
-    | "status"
     | "timeComplexity"
     | "spaceComplexity"
     | "body"
-  >,
+  > & { status?: Solution["status"] },
 ) {
   return withDb((db) => {
     const existing = db.solutions.find((s) => s.id === input.id);
@@ -256,7 +255,8 @@ export function upsertSolution(
       existing.title = input.title;
       existing.language = input.language;
       existing.version = input.version;
-      existing.status = input.status;
+      existing.status = "done";
+      existing.publishedAt = existing.publishedAt ?? ts;
       existing.timeComplexity = input.timeComplexity;
       existing.spaceComplexity = input.spaceComplexity;
       existing.body = input.body;
@@ -264,26 +264,33 @@ export function upsertSolution(
       addActivity("solution_updated", { problemId: existing.problemId, objectId: existing.id });
       return existing;
     }
-    const s: Solution = { ...input, createdAt: ts, updatedAt: ts };
+    const s: Solution = { ...input, status: "done", publishedAt: ts, createdAt: ts, updatedAt: ts };
     db.solutions.push(s);
     addActivity("solution_created", { problemId: s.problemId, objectId: s.id });
+    addActivity("solution_published", { problemId: s.problemId, objectId: s.id });
     return s;
   });
 }
 
 export function createSolution(
-  input: Pick<
-    Solution,
-    "problemId" | "title" | "language" | "version" | "status" | "timeComplexity" | "spaceComplexity" | "body"
-  >,
+  input: Pick<Solution, "problemId" | "title" | "language" | "version" | "timeComplexity" | "spaceComplexity" | "body"> & {
+    status?: Solution["status"];
+  },
 ) {
   const ts = nowIso();
   return withDb((db) => {
-    const s: Solution = { id: id("s"), ...input, createdAt: ts, updatedAt: ts };
+    const s: Solution = { id: id("s"), ...input, status: "done", publishedAt: ts, createdAt: ts, updatedAt: ts };
     db.solutions.push(s);
     db.activities.unshift({
       id: id("act"),
       type: "solution_created",
+      at: ts,
+      problemId: s.problemId,
+      objectId: s.id,
+    });
+    db.activities.unshift({
+      id: id("act"),
+      type: "solution_published",
       at: ts,
       problemId: s.problemId,
       objectId: s.id,

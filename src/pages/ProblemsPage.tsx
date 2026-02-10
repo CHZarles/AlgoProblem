@@ -276,12 +276,12 @@ export default function ProblemsPage() {
             active={hasSolution === true}
             onClick={() => setHasSolution(hasSolution === true ? "all" : true)}
           >
-            已发布题解
+            有题解
           </Chip>
 
           {hasSolution === false ? (
             <Chip active onClick={() => setHasSolution("all")}>
-              未发布题解 <X className="h-4 w-4" />
+              无题解 <X className="h-4 w-4" />
             </Chip>
           ) : null}
 

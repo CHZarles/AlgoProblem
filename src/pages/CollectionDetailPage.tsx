@@ -267,13 +267,13 @@ export default function CollectionDetailPage() {
             <div>
               <div className="text-sm font-semibold text-slate-200">计划</div>
               <div className="mt-1 text-xs text-slate-500">
-                本周进度：完成 {plan.doneProblemsThisWeek}/{plan.goalProblemsWeek || "—"} · 已发布题解{" "}
+                本周进度：完成 {plan.doneProblemsThisWeek}/{plan.goalProblemsWeek || "—"} · 题解{" "}
                 {plan.publishedSolutionsThisWeek}/{plan.goalPublishesWeek || "—"}
                 {plan.dueAt ? ` · 截止 ${new Date(plan.dueAt).toLocaleDateString()}` : ""}
               </div>
             </div>
             <div className="text-xs text-slate-500">
-              今日目标：做 {plan.solveTargetToday} 题 · 发布 {plan.publishTargetToday} 题解（剩余 {plan.daysRemaining} 天）
+              今日目标：做 {plan.solveTargetToday} 题 · 写 {plan.publishTargetToday} 题解（剩余 {plan.daysRemaining} 天）
             </div>
           </div>
 
@@ -309,7 +309,7 @@ export default function CollectionDetailPage() {
             </div>
 
             <div className="col-span-12 md:col-span-6">
-              <div className="text-xs text-slate-500">已发布题解（本周）</div>
+              <div className="text-xs text-slate-500">题解（本周）</div>
               <div className="mt-2 h-2 rounded-full bg-black/20">
                 <div
                   className="h-2 rounded-full bg-emerald-500/70"
@@ -330,11 +330,11 @@ export default function CollectionDetailPage() {
                     </Link>
                   ))}
                   {publishRemaining ? (
-                    <div className="px-1 text-xs text-slate-500">还有 {publishRemaining} 题可发布题解</div>
+                    <div className="px-1 text-xs text-slate-500">还有 {publishRemaining} 题可写题解</div>
                   ) : null}
                 </div>
               ) : (
-                <div className="mt-3 text-xs text-slate-500">今日无题解发布任务</div>
+                <div className="mt-3 text-xs text-slate-500">今日无题解任务</div>
               )}
             </div>
           </div>
@@ -490,7 +490,7 @@ export default function CollectionDetailPage() {
                   />
                 </div>
                 <div className="col-span-6">
-                  <div className="text-xs text-slate-500">本周目标（已发布题解）</div>
+                  <div className="text-xs text-slate-500">本周目标（题解）</div>
                   <Input
                     type="number"
                     min={0}

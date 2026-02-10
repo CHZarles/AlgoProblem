@@ -83,7 +83,7 @@ export function Heatmap({
   return (
     <div className={cn("rounded-2xl bg-white/3 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]", className)}>
       <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-200">{mode === "publish" ? "发布热力图" : "复习热力图"}</div>
+        <div className="text-sm font-semibold text-slate-200">{mode === "publish" ? "题解热力图" : "复习热力图"}</div>
         <div className="text-xs text-slate-500">过去约 12 个月</div>
       </div>
 

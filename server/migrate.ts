@@ -207,8 +207,10 @@ export function migrate() {
     d.prepare(
       "UPDATE problems SET completed_at = COALESCE(completed_at, last_activity_at) WHERE status = 'done' AND completed_at IS NULL",
     ).run();
+    // Solutions are always effective once saved; normalize legacy drafts to "done".
+    d.prepare("UPDATE solutions SET status = 'done' WHERE status <> 'done'").run();
     d.prepare(
-      "UPDATE solutions SET published_at = COALESCE(published_at, updated_at) WHERE status = 'done' AND published_at IS NULL",
+      "UPDATE solutions SET published_at = COALESCE(published_at, updated_at) WHERE published_at IS NULL",
     ).run();
 
     // Backfill source_urls_json with the current source_url when empty.

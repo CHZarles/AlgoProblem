@@ -61,7 +61,7 @@ export function solutionsRoutes() {
       title: z.string().min(1),
       language: z.string().min(1),
       version: z.enum(["first", "second", "optimal"]),
-      status: z.enum(["draft", "done"]),
+      status: z.enum(["draft", "done"]).optional(),
       timeComplexity: z.string().optional(),
       spaceComplexity: z.string().optional(),
       body: z.string(),
@@ -71,7 +71,8 @@ export function solutionsRoutes() {
     const d = db();
     const ts = nowIso();
     const id = uuid("s");
-    const publishedAt = body.data.status === "done" ? ts : null;
+    const status = "done";
+    const publishedAt = ts;
 
     d.prepare(
       `INSERT INTO solutions
@@ -84,7 +85,7 @@ export function solutionsRoutes() {
       body.data.title,
       body.data.language,
       body.data.version,
-      body.data.status,
+      status,
       publishedAt,
       body.data.timeComplexity ?? null,
       body.data.spaceComplexity ?? null,
@@ -100,16 +101,14 @@ export function solutionsRoutes() {
       body.data.problemId,
       id,
     );
-    if (body.data.status === "done") {
-      d.prepare("INSERT INTO activities (id, workspace_id, type, at, problem_id, object_id) VALUES (?, ?, ?, ?, ?, ?)").run(
-        uuid("act"),
-        workspaceId,
-        "solution_published",
-        ts,
-        body.data.problemId,
-        id,
-      );
-    }
+    d.prepare("INSERT INTO activities (id, workspace_id, type, at, problem_id, object_id) VALUES (?, ?, ?, ?, ?, ?)").run(
+      uuid("act"),
+      workspaceId,
+      "solution_published",
+      ts,
+      body.data.problemId,
+      id,
+    );
     d.prepare("UPDATE problems SET updated_at = ?, last_activity_at = ? WHERE id = ? AND workspace_id = ?").run(
       ts,
       ts,
@@ -136,18 +135,18 @@ export function solutionsRoutes() {
     const ts = nowIso();
 
     const existing = d
-      .prepare("SELECT id, problem_id, status FROM solutions WHERE id = ? AND workspace_id = ?")
-      .get(req.params.id, workspaceId) as { id: string; problem_id: string; status: string } | undefined;
+      .prepare("SELECT id, problem_id, status, published_at FROM solutions WHERE id = ? AND workspace_id = ?")
+      .get(req.params.id, workspaceId) as { id: string; problem_id: string; status: string; published_at: string | null } | undefined;
     if (!existing) return res.status(404).json({ error: "not_found" });
 
-    const nextStatus = body.data.status;
-    const willPublish = nextStatus === "done" && existing.status !== "done";
-    const willUnpublish = nextStatus === "draft" && existing.status === "done";
+    const hasPublishedAt = Boolean(existing.published_at);
+    const shouldPublish = !hasPublishedAt || existing.status !== "done";
 
     const fields: string[] = [];
     const params: unknown[] = [];
     for (const [k, v] of Object.entries(body.data)) {
       if (v === undefined) continue;
+      if (k === "status") continue; // No explicit publish/unpublish anymore.
       if (k === "timeComplexity") {
         fields.push("time_complexity = ?");
         params.push(v ?? null);
@@ -163,13 +162,13 @@ export function solutionsRoutes() {
       params.push(v);
     }
 
-    if (willPublish) {
+    // Save always makes the solution effective.
+    // Ensure it's marked as done and has a published_at for stats/filters.
+    if (shouldPublish) {
+      fields.push("status = ?");
+      params.push("done");
       fields.push("published_at = ?");
       params.push(ts);
-    }
-    if (willUnpublish) {
-      fields.push("published_at = ?");
-      params.push(null);
     }
     fields.push("updated_at = ?");
     params.push(ts);
@@ -184,21 +183,11 @@ export function solutionsRoutes() {
       existing.problem_id,
       existing.id,
     );
-    if (willPublish) {
+    if (shouldPublish) {
       d.prepare("INSERT INTO activities (id, workspace_id, type, at, problem_id, object_id) VALUES (?, ?, ?, ?, ?, ?)").run(
         uuid("act"),
         workspaceId,
         "solution_published",
-        ts,
-        existing.problem_id,
-        existing.id,
-      );
-    }
-    if (willUnpublish) {
-      d.prepare("INSERT INTO activities (id, workspace_id, type, at, problem_id, object_id) VALUES (?, ?, ?, ?, ?, ?)").run(
-        uuid("act"),
-        workspaceId,
-        "solution_unpublished",
         ts,
         existing.problem_id,
         existing.id,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { ErrorBlock, LoadingBlock } from "../app/components/StateBlocks";
 import { cn } from "../lib/cn";
 import { useApiQuery } from "../api/hooks";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
+import { detectSolutionLanguage } from "../lib/detectSolutionLanguage";
 
 const EMPTY_SOLUTIONS: Solution[] = [];
 
@@ -41,16 +42,26 @@ function SolutionEditor({
   const [title, setTitle] = useState(solution.title);
   const [lang, setLang] = useState(solution.language);
   const [body, setBody] = useState(solution.body);
-  const [publishing, setPublishing] = useState(false);
   const [baseTitle, setBaseTitle] = useState(solution.title);
   const [baseLang, setBaseLang] = useState(solution.language);
   const [baseBody, setBaseBody] = useState(solution.body);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+  const titleRef = useRef<HTMLInputElement | null>(null);
+  const languageLockedRef = useRef(false);
 
   const dirty = useMemo(() => title !== baseTitle || lang !== baseLang || body !== baseBody, [baseBody, baseLang, baseTitle, body, lang, title]);
 
   useEffect(() => onDirtyChange(editing ? dirty : false), [dirty, editing, onDirtyChange]);
+  useEffect(() => {
+    if (!editing) return;
+    const el = titleRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(0, el.value.length);
+    });
+  }, [editing]);
 
   return (
     <div className="space-y-3">
@@ -66,57 +77,22 @@ function SolutionEditor({
           <div className="min-w-0">
             <div className="truncate text-base font-semibold text-slate-50">{title}</div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">{lang.toUpperCase()}</span>
-              <Badge tone={solution.status === "done" ? "easy" : "neutral"}>{solution.status === "done" ? "已发布" : "草稿"}</Badge>
+              <span className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-slate-400">
+                {lang.toUpperCase()} · {solution.version}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
               编辑
             </Button>
-            {solution.status === "done" ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={publishing || saving}
-                onClick={() => {
-                  setPublishing(true);
-                  patchSolution(solution.id, { status: "draft" })
-                    .then(() => {
-                      toast.success("已撤回为草稿");
-                      onReload();
-                    })
-                    .catch(() => toast.error("操作失败"))
-                    .finally(() => setPublishing(false));
-                }}
-              >
-                撤回
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={publishing || saving}
-                onClick={() => {
-                  setPublishing(true);
-                  patchSolution(solution.id, { status: "done" })
-                    .then(() => {
-                      toast.success("已发布题解");
-                      onReload();
-                    })
-                    .catch(() => toast.error("发布失败"))
-                    .finally(() => setPublishing(false));
-                }}
-              >
-                发布
-              </Button>
-            )}
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-12 gap-2">
           <div className="col-span-7">
             <Input
+              ref={titleRef}
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
@@ -128,12 +104,13 @@ function SolutionEditor({
               value={lang}
               options={LANGUAGE_OPTIONS.filter((x) => x.value !== "all")}
               onChange={(v) => {
+                languageLockedRef.current = true;
                 setLang(v);
               }}
             />
           </div>
           <div className="col-span-2 flex items-center justify-end">
-            <Badge tone={solution.status === "done" ? "easy" : "neutral"}>{solution.status === "done" ? "已发布" : "草稿"}</Badge>
+            <div className="text-xs text-slate-500">{solution.version}</div>
           </div>
         </div>
       )}
@@ -142,6 +119,10 @@ function SolutionEditor({
         <MarkdownEditor
           value={body}
           onChange={(v) => {
+            if (!languageLockedRef.current) {
+              const detected = detectSolutionLanguage(v);
+              if (detected && detected !== lang) setLang(detected);
+            }
             setBody(v);
           }}
           minHeightClass="min-h-[64vh]"
@@ -164,7 +145,7 @@ function SolutionEditor({
             <Button
               size="sm"
               variant="secondary"
-              disabled={saving || publishing}
+              disabled={saving}
               onClick={() => {
                 if (dirty) {
                   const ok = window.confirm("有未保存修改，确认丢弃？");
@@ -181,7 +162,7 @@ function SolutionEditor({
             <Button
               size="sm"
               variant="primary"
-              disabled={!dirty || saving || publishing}
+              disabled={!dirty || saving}
               onClick={async () => {
                 const trimmed = title.trim();
                 if (!trimmed) return toast.error("标题不能为空");
@@ -215,7 +196,7 @@ export default function SolutionsPage() {
   const [language, setLanguage] = useState<"all" | string>("all");
   const [focus, setFocus] = useState(false);
   const q = useDebouncedValue(query.trim(), 180);
-  const qSolutions = useApiQuery(() => listSolutions({ q, language, status: "done" }), [q, language]);
+  const qSolutions = useApiQuery(() => listSolutions({ q, language, status: "all" }), [q, language]);
   const solutions = qSolutions.data ?? EMPTY_SOLUTIONS;
   const [solutionId, setSolutionId] = useState<string | null>(solutions[0]?.id ?? null);
   const active = useMemo(() => solutions.find((s) => s.id === solutionId) ?? solutions[0] ?? null, [solutions, solutionId]);
@@ -282,13 +263,13 @@ export default function SolutionsPage() {
                           <HighlightText text={s.title} query={query} />
                         </div>
                         <div className="mt-0.5 truncate text-xs text-slate-500">
-                          {s.language.toUpperCase()} · {s.version} · {s.status === "done" ? "已发布" : "草稿"}
+                          {s.language.toUpperCase()} · {s.version}
                         </div>
                       </ListRowButton>
                     ))}
                   </div>
                 ) : (
-                  <EmptyState title="暂无已发布题解" className="bg-transparent p-3 shadow-none" />
+                  <EmptyState title="暂无题解" className="bg-transparent p-3 shadow-none" />
                 )}
               </div>
           </div>
@@ -299,7 +280,7 @@ export default function SolutionsPage() {
           {active ? (
             <SolutionEditor key={active.id} solution={active} onDirtyChange={setSolutionDirty} onReload={qSolutions.reload} />
           ) : (
-            <EmptyState title="选择一份题解查看" description="题解列表默认只展示已发布内容。" />
+            <EmptyState title="选择一份题解查看" description="题解统一为「保存即生效」，无需发布。" />
           )}
         </div>
       </div>

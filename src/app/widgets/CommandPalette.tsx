@@ -142,7 +142,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                       <div className="min-w-0">
                         <div className="truncate">{s.title}</div>
                         <div className="mt-0.5 truncate text-xs text-slate-500">
-                          {s.language.toUpperCase()} · {s.version} · {s.status === "done" ? "已发布" : "草稿"}
+                          {s.language.toUpperCase()} · {s.version}
                         </div>
                       </div>
                       <div className="text-xs text-slate-500">打开</div>

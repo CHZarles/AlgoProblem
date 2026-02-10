@@ -240,7 +240,7 @@ export default function CollectionsPage() {
                   />
                 </div>
                 <div className="col-span-6">
-                  <div className="text-xs text-slate-500">本周目标（已发布题解）</div>
+                  <div className="text-xs text-slate-500">本周目标（题解）</div>
                   <Input
                     type="number"
                     min={0}

@@ -52,14 +52,14 @@ export default function StatsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-lg font-semibold text-slate-50">统计</div>
-          <div className="mt-1 text-sm text-slate-500">热力图与统计支持按「复习 / 发布」口径切换。</div>
+          <div className="mt-1 text-sm text-slate-500">热力图与统计支持按「复习 / 题解」口径切换。</div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant={mode === "review" ? "primary" : "secondary"} onClick={() => setMode("review")}>
             复习
           </Button>
           <Button variant={mode === "publish" ? "primary" : "secondary"} onClick={() => setMode("publish")}>
-            发布
+            题解
           </Button>
         </div>
       </div>
@@ -75,10 +75,10 @@ export default function StatsPage() {
           </div>
         ) : (
           [
-            { k: mode === "publish" ? "连续发布天数" : "连续复习天数", v: `${streak} 天` },
-            { k: mode === "publish" ? "近 30 天发布" : "近 30 天复习", v: `${last30 ?? "—"}` },
-            { k: mode === "publish" ? "累计发布次数" : "累计复习次数", v: `${total ?? "—"}` },
-            { k: mode === "publish" ? "已发布题解" : "已做题数", v: `${mode === "publish" ? stats.solutionsDone : stats.problemsDone}` },
+            { k: mode === "publish" ? "连续题解天数" : "连续复习天数", v: `${streak} 天` },
+            { k: mode === "publish" ? "近 30 天题解" : "近 30 天复习", v: `${last30 ?? "—"}` },
+            { k: mode === "publish" ? "累计题解次数" : "累计复习次数", v: `${total ?? "—"}` },
+            { k: mode === "publish" ? "题解数量" : "已做题数", v: `${mode === "publish" ? stats.solutionsDone : stats.problemsDone}` },
           ].map((x) => (
             <div
               key={x.k}
