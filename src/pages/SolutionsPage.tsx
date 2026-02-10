@@ -55,6 +55,10 @@ function SolutionEditor({
   useEffect(() => onDirtyChange(editing ? dirty : false), [dirty, editing, onDirtyChange]);
   useEffect(() => {
     if (!editing) return;
+    if (!languageLockedRef.current) {
+      const detected = detectSolutionLanguage(body);
+      if (detected && detected !== lang) setLang(detected);
+    }
     const el = titleRef.current;
     if (!el) return;
     requestAnimationFrame(() => {

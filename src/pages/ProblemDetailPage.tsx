@@ -297,6 +297,10 @@ function SolutionEditor({
 
   useEffect(() => {
     if (!editing) return;
+    if (!languageLockedRef.current) {
+      const detected = detectSolutionLanguage(body);
+      if (detected && detected !== language) setLanguage(detected);
+    }
     const el = titleRef.current;
     if (!el) return;
     requestAnimationFrame(() => {
