@@ -3,7 +3,6 @@ export type Difficulty = "easy" | "medium" | "hard" | "unknown";
 export type ProblemStatus =
   | "todo"
   | "done"
-  | "reviewing"
   | "classic"
   | "abandoned";
 

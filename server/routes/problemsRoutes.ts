@@ -889,7 +889,7 @@ ${rawMarkdown}
   r.post("/:id/status", (req, res) => {
     const workspaceId = (req as unknown as WorkspaceRequest).workspaceId;
     const d = db();
-    const Body = z.object({ status: z.enum(["todo", "done", "reviewing", "classic", "abandoned"]) });
+    const Body = z.object({ status: z.enum(["todo", "done", "classic", "abandoned"]) });
     const body = Body.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "invalid_request" });
     const ts = nowIso();
@@ -959,16 +959,6 @@ ${rawMarkdown}
       mistakeTags: body.data.mistakeTags,
     });
     if (!out.ok) return res.status(404).json({ error: "not_found" });
-
-    // Keep legacy behavior: a review check-in moves the problem into "reviewing".
-    // If ignored (not due / duplicate), don't change status.
-    if (!("ignored" in out && out.ignored)) {
-      d.prepare("UPDATE problems SET status = ? WHERE id = ? AND workspace_id = ? AND status != 'abandoned'").run(
-        "reviewing",
-        req.params.id,
-        workspaceId,
-      );
-    }
 
     return res.json(out);
   });

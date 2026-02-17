@@ -204,6 +204,8 @@ export function migrate() {
     tx();
 
     // Backfill derived timestamps in a best-effort way.
+    // Review is orthogonal to "done/todo"; normalize legacy "reviewing" into "done".
+    d.prepare("UPDATE problems SET status = 'done' WHERE status = 'reviewing'").run();
     d.prepare(
       "UPDATE problems SET completed_at = COALESCE(completed_at, last_activity_at) WHERE status = 'done' AND completed_at IS NULL",
     ).run();

@@ -41,18 +41,7 @@ export function seedWorkspaceDb(nowIso: string): WorkspaceDb {
     const meta = demoLeetMetaFromSlug(slug);
     const createdAt = daysAgo(60 - idx);
     const updatedAt = idx % 4 === 0 ? daysAgo(1) : idx % 4 === 1 ? daysAgo(3) : idx % 4 === 2 ? daysAgo(7) : daysAgo(12);
-    const status: ProblemStatus =
-      idx % 6 === 0
-        ? "reviewing"
-        : idx % 6 === 1
-          ? "done"
-          : idx % 6 === 2
-            ? "todo"
-            : idx % 6 === 3
-              ? "done"
-              : idx % 6 === 4
-                ? "reviewing"
-                : "todo";
+    const status: ProblemStatus = idx % 3 === 0 ? "todo" : "done";
 
     const collections = [
       ...(TOP100.has(id) ? ["col_top100"] : []),
@@ -60,8 +49,14 @@ export function seedWorkspaceDb(nowIso: string): WorkspaceDb {
       ...(INTERVIEW_20.has(id) ? ["col_interview_20"] : []),
     ];
 
-    const reviewing = status === "reviewing";
-    const reviewNextAt = reviewing ? (idx % 3 === 0 ? daysFromNow(0) : idx % 3 === 1 ? daysFromNow(-2) : daysFromNow(1)) : undefined;
+    const reviewEnabled = status === "done";
+    const reviewNextAt = reviewEnabled
+      ? idx % 5 === 0
+        ? daysFromNow(0)
+        : idx % 5 === 1
+          ? daysFromNow(-2)
+          : daysFromNow(1)
+      : undefined;
 
     return {
       id,
@@ -79,14 +74,14 @@ export function seedWorkspaceDb(nowIso: string): WorkspaceDb {
       updatedAt,
       lastActivityAt: updatedAt,
       ...(status === "done" ? { completedAt: updatedAt } : {}),
-      ...(reviewing
+      ...(reviewEnabled
         ? {
             reviewNextAt,
             reviewIntervalDays: idx % 3 === 0 ? 1 : idx % 3 === 1 ? 3 : 7,
-            reviewCount: idx % 3 === 0 ? 1 : idx % 3 === 1 ? 2 : 4,
+            reviewCount: idx % 3 === 0 ? 0 : idx % 3 === 1 ? 1 : 3,
             reviewEase: idx % 2 === 0 ? 2.6 : 2.4,
-            reviewLastAt: idx % 2 === 0 ? daysAgo(1) : daysAgo(4),
-            reviewMistakeTags: idx % 2 === 0 ? ["边界", "实现"] : ["思路", "复杂度"],
+            ...(idx % 3 === 0 ? {} : { reviewLastAt: idx % 2 === 0 ? daysAgo(1) : daysAgo(4) }),
+            ...(idx % 3 === 0 ? {} : { reviewMistakeTags: idx % 2 === 0 ? ["边界", "实现"] : ["思路", "复杂度"] }),
           }
         : {}),
     };
@@ -100,7 +95,7 @@ export function seedWorkspaceDb(nowIso: string): WorkspaceDb {
     externalId: "2",
     title: "01 背包问题（示例）",
     difficulty: "medium" as const,
-    status: "reviewing" as const,
+    status: "done" as const,
     tags: ["dp", "knapsack"],
     collections: ["col_top100", "col_interview_20"],
     markdown: `---
@@ -117,6 +112,7 @@ N 件物品、容量 V，每件物品最多选一次，求最大价值（经典 
     createdAt: daysAgo(45),
     updatedAt: daysAgo(2),
     lastActivityAt: daysAgo(2),
+    completedAt: daysAgo(20),
     reviewNextAt: daysFromNow(-1),
     reviewIntervalDays: 2,
     reviewCount: 3,

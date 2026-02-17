@@ -375,18 +375,86 @@ export async function demoApiFetch<T>({ path, init }: DemoRequest): Promise<T> {
   if (method === "POST" && mStatus) {
     const id = mStatus[0];
     const status = String((body as any)?.status ?? "");
+    if (!["todo", "done", "classic", "abandoned"].includes(status)) throw new ApiError("invalid_request", 400);
     withDb((db) => {
       const p = db.problems.find((x) => x.id === id);
       if (!p) throw new ApiError("not_found", 404);
+      const ts = nowIso();
       p.status = status as any;
-      p.updatedAt = nowIso();
-      p.lastActivityAt = p.updatedAt;
+      p.updatedAt = ts;
+      p.lastActivityAt = ts;
+      if (status === "todo") {
+        delete p.completedAt;
+        delete p.reviewNextAt;
+        delete p.reviewLastAt;
+        delete p.reviewMistakeTags;
+        p.reviewIntervalDays = 0;
+        p.reviewCount = 0;
+        p.reviewEase = 2.5;
+      }
       if (status === "done") {
-        p.completedAt = p.updatedAt;
+        p.completedAt = p.completedAt ?? ts;
+        p.reviewNextAt = p.reviewNextAt ?? new Date(Date.now() + 86400000).toISOString();
+        p.reviewIntervalDays = Math.max(1, p.reviewIntervalDays ?? 1);
         addActivity("problem_completed", { problemId: id });
       }
     });
     return { ok: true } as unknown as T;
+  }
+
+  const mProblemReview = matchPath(pathname, /^\/problems\/([^/]+)\/review$/);
+  if (method === "POST" && mProblemReview) {
+    const problemId = mProblemReview[0];
+    const result = String((body as any)?.result ?? "good") as "good" | "hard" | "again";
+    const mistakeTags = Array.isArray((body as any)?.mistakeTags) ? ((body as any).mistakeTags as any[]).map((x) => String(x)) : [];
+    const today = startOfDayMs(now);
+
+    const out = withDb((db) => {
+      const p = db.problems.find((x) => x.id === problemId);
+      if (!p) throw new ApiError("not_found", 404);
+
+      const lastAt = p.reviewLastAt ? new Date(p.reviewLastAt) : null;
+      if (lastAt && startOfDayMs(lastAt) === today) {
+        return { ok: true, ignored: true as const, reason: "duplicate_today" as const };
+      }
+
+      const nextAt = p.reviewNextAt ? new Date(p.reviewNextAt) : null;
+      if (nextAt && startOfDayMs(nextAt) > today) {
+        return { ok: true, ignored: true as const, reason: "not_due" as const };
+      }
+
+      const prevInterval = p.reviewIntervalDays ?? 1;
+      const prevEase = p.reviewEase ?? 2.5;
+      const prevCount = p.reviewCount ?? 0;
+
+      let ease = prevEase;
+      let interval = prevInterval;
+      if (result === "again") {
+        ease = Math.max(1.3, ease - 0.3);
+        interval = 1;
+      } else if (result === "hard") {
+        ease = Math.max(1.3, ease - 0.1);
+        interval = Math.max(1, Math.round(prevInterval * 1.2));
+      } else {
+        ease = Math.min(3.2, ease + 0.1);
+        interval = Math.max(1, Math.round(prevInterval * ease));
+      }
+
+      const next = new Date(today + interval * 86400000).toISOString();
+      p.reviewLastAt = now.toISOString();
+      p.reviewNextAt = next;
+      p.reviewIntervalDays = interval;
+      p.reviewCount = prevCount + 1;
+      p.reviewEase = ease;
+      p.reviewMistakeTags = uniqStrings(mistakeTags);
+      p.updatedAt = now.toISOString();
+      p.lastActivityAt = p.updatedAt;
+      addActivity("review_completed", { problemId: p.id });
+
+      return { ok: true, nextReviewAt: next, intervalDays: interval };
+    });
+
+    return out as unknown as T;
   }
 
   // review
@@ -399,7 +467,7 @@ export async function demoApiFetch<T>({ path, init }: DemoRequest): Promise<T> {
           const interval = p.reviewIntervalDays ?? 1;
           const count = p.reviewCount ?? 0;
           const ease = p.reviewEase ?? 2.5;
-          const nextAt = p.reviewNextAt ?? (p.status === "reviewing" ? new Date(today).toISOString() : undefined);
+          const nextAt = p.reviewNextAt;
           if (!nextAt) return null;
           const due = startOfDayMs(new Date(nextAt)) <= today;
           if (!due) return null;
@@ -470,7 +538,6 @@ export async function demoApiFetch<T>({ path, init }: DemoRequest): Promise<T> {
       }
 
       const next = new Date(today + interval * 86400000).toISOString();
-      p.status = "reviewing";
       p.reviewLastAt = now.toISOString();
       p.reviewNextAt = next;
       p.reviewIntervalDays = interval;

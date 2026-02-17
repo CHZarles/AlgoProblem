@@ -46,8 +46,6 @@ function statusLabel(s: ProblemStatus) {
       return "未做";
     case "done":
       return "已做";
-    case "reviewing":
-      return "复习中";
     case "classic":
       return "经典";
     case "abandoned":
@@ -59,8 +57,6 @@ function statusTone(s: ProblemStatus) {
   switch (s) {
     case "done":
       return "easy";
-    case "reviewing":
-      return "ok";
     case "classic":
       return "medium";
     case "abandoned":

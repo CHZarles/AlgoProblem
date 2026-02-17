@@ -326,9 +326,14 @@ export function markReviewCompleted(problemId: string) {
   return withDb((db) => {
     const p = db.problems.find((x) => x.id === problemId);
     if (!p) return null;
-    p.status = "reviewing";
-    p.updatedAt = nowIso();
-    p.lastActivityAt = p.updatedAt;
+    const ts = nowIso();
+    const next = new Date(Date.now() + 86400000).toISOString();
+    p.reviewLastAt = ts;
+    p.reviewNextAt = next;
+    p.reviewIntervalDays = Math.max(1, p.reviewIntervalDays ?? 1);
+    p.reviewCount = (p.reviewCount ?? 0) + 1;
+    p.updatedAt = ts;
+    p.lastActivityAt = ts;
     addActivity("review_completed", { problemId });
     return p;
   });

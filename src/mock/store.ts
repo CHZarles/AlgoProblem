@@ -2,7 +2,7 @@ import type { WorkspaceDb } from "../types/model";
 import { seedWorkspaceDb } from "./seed";
 
 // Bump to force a re-seed when demo content changes.
-const STORAGE_KEY = "algoproblem.workspace.v3";
+const STORAGE_KEY = "algoproblem.workspace.v4";
 
 function safeParse(json: string | null): WorkspaceDb | null {
   if (!json) return null;

@@ -165,7 +165,7 @@ export default function ReviewPage() {
           ) : (
             <EmptyState
               title="今天没有到期复习"
-              description="去题库做题，或把题目标记为「复习中」。"
+              description="去题库做题，或先把题目标记为「已做」以生成复习计划。"
               className="rounded-none bg-transparent p-6 shadow-none"
             />
           )}

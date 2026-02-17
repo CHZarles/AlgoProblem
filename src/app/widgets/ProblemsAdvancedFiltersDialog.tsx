@@ -190,12 +190,6 @@ export function ProblemsAdvancedFiltersDialog({
                     已做
                   </Chip>
                   <Chip
-                    active={draft.status === "reviewing"}
-                    onClick={() => setDraft((d) => ({ ...d, status: "reviewing" }))}
-                  >
-                    复习中
-                  </Chip>
-                  <Chip
                     active={draft.status === "classic"}
                     onClick={() => setDraft((d) => ({ ...d, status: "classic" }))}
                   >
