@@ -148,7 +148,7 @@ export default function ReviewPage() {
                         className={cn(
                           "rounded-full px-2 py-1 text-[11px] transition",
                           active
-                            ? "bg-rose-500/16 text-rose-200 shadow-[0_0_0_1px_rgba(244,63,94,0.30)]"
+                            ? "bg-rose-500/16 text-rose-300 shadow-[0_0_0_1px_rgba(244,63,94,0.30)]"
                             : "bg-white/6 text-slate-300 hover:bg-white/8",
                         )}
                       >

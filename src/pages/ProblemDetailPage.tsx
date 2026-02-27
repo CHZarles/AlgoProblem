@@ -1059,7 +1059,7 @@ export default function ProblemDetailPage() {
                       <div className="text-xs text-slate-500">错因</div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {problem.reviewMistakeTags.slice(0, 8).map((t) => (
-                          <span key={t} className="rounded-full bg-rose-500/16 px-2 py-0.5 text-[11px] text-rose-200">
+                          <span key={t} className="rounded-full bg-rose-500/16 px-2 py-0.5 text-[11px] text-rose-300">
                             {t}
                           </span>
                         ))}
